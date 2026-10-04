@@ -11,14 +11,14 @@ from core.profile import describe_step
 from core.theme import style
 
 CSS = """
-body{font-family:Inter,-apple-system,Segoe UI,Roboto,sans-serif;color:#0F172A;max-width:1000px;margin:32px auto;padding:0 20px;line-height:1.55}
-h1{font-size:28px;margin-bottom:0}h2{margin-top:36px;border-bottom:2px solid #E2E8F0;padding-bottom:6px;font-size:20px}
-.sub{color:#64748B;margin-top:4px}.kpis{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
-.kpi{flex:1;min-width:140px;border:1px solid #E2E8F0;border-radius:12px;padding:14px 16px;background:#F8FAFC}
-.kpi b{display:block;font-size:24px;color:#4F46E5}.kpi span{font-size:12px;color:#64748B;text-transform:uppercase;letter-spacing:.04em}
-table{border-collapse:collapse;width:100%;font-size:13px;margin:10px 0}th,td{border-bottom:1px solid #E2E8F0;padding:6px 10px;text-align:left}
-th{background:#F1F5F9}.warn{background:#FFFBEB;border-left:4px solid #F59E0B;padding:8px 12px;margin:6px 0;border-radius:4px}
-li{margin:4px 0}.foot{color:#64748B;font-size:12px;margin-top:40px}@media print{.chart{break-inside:avoid}}
+body{font-family:'IBM Plex Sans',-apple-system,Segoe UI,Roboto,sans-serif;color:#1F2933;background:#FBFAF7;max-width:1000px;margin:32px auto;padding:0 20px;line-height:1.55}
+h1,h2{font-family:'Source Serif 4',Georgia,serif}h1{font-size:30px;margin-bottom:0}h2{margin-top:36px;border-bottom:1px solid #DAD6CE;padding-bottom:6px;font-size:20px}
+.sub{color:#5F6B76;margin-top:4px}.kpis{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+.kpi{flex:1;min-width:140px;border:1px solid #DAD6CE;border-radius:4px;padding:14px 16px;background:#fff}
+.kpi b{display:block;font-size:24px;color:#1E5A78}.kpi span{font-size:12px;color:#5F6B76;text-transform:uppercase;letter-spacing:.04em}
+table{border-collapse:collapse;width:100%;font-size:13px;margin:10px 0}th,td{border-bottom:1px solid #DAD6CE;padding:6px 10px;text-align:left}
+th{background:#F3F1EB}.warn{background:#FFFBEB;border-left:3px solid #B7791F;padding:8px 12px;margin:6px 0;border-radius:0 4px 4px 0}
+li{margin:4px 0}.foot{color:#5F6B76;font-size:12px;margin-top:40px}@media print{.chart{break-inside:avoid}}
 """
 
 

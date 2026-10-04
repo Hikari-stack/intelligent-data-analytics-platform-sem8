@@ -4,24 +4,27 @@ from __future__ import annotations
 import plotly.graph_objects as go
 import plotly.io as pio
 
-ACCENT = "#4F46E5"      # indigo
-GOOD, WARN, BAD = "#10B981", "#F59E0B", "#EF4444"
-INK, MUTED, LINE = "#0F172A", "#64748B", "#E2E8F0"
-PALETTE = ["#4F46E5", "#06B6D4", "#10B981", "#F59E0B", "#EC4899", "#8B5CF6", "#64748B", "#EF4444"]
-DIVERGING = [[0, "#EF4444"], [0.5, "#F8FAFC"], [1, "#4F46E5"]]
-SEQUENTIAL = [[0, "#EEF2FF"], [1, "#4F46E5"]]
+ACCENT = "#1E5A78"      # petrol blue
+GOOD, WARN, BAD = "#3F7D58", "#B7791F", "#B3412F"
+INK, MUTED, LINE = "#1F2933", "#5F6B76", "#DAD6CE"
+PAPER = "#FBFAF7"
+PALETTE = ["#1E5A78", "#C1692F", "#4F8A67", "#8C6A9E", "#C9A227", "#6B7A86", "#A8402F", "#3A8FA3"]
+DIVERGING = [[0, BAD], [0.5, PAPER], [1, ACCENT]]
+SEQUENTIAL = [[0, "#E4EEF3"], [1, ACCENT]]
+
+_FONT = "IBM Plex Sans, -apple-system, Segoe UI, Roboto, sans-serif"
 
 _template = go.layout.Template()
 _template.layout = go.Layout(
-    font=dict(family="Inter, -apple-system, Segoe UI, Roboto, sans-serif", size=13, color=INK),
-    title=dict(font=dict(size=16, color=INK), x=0.0, xanchor="left"),
+    font=dict(family=_FONT, size=13, color=INK),
+    title=dict(font=dict(size=15, color=INK), x=0.0, xanchor="left"),
     colorway=PALETTE,
     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
     margin=dict(l=40, r=20, t=56, b=40),
-    xaxis=dict(gridcolor=LINE, linecolor=LINE, zeroline=False),
-    yaxis=dict(gridcolor=LINE, linecolor=LINE, zeroline=False),
+    xaxis=dict(gridcolor="#ECE9E2", linecolor=LINE, zeroline=False, ticks="outside", tickcolor=LINE),
+    yaxis=dict(gridcolor="#ECE9E2", linecolor=LINE, zeroline=False),
     legend=dict(bgcolor="rgba(0,0,0,0)"),
-    hoverlabel=dict(font=dict(family="Inter, sans-serif")),
+    hoverlabel=dict(font=dict(family=_FONT), bgcolor="#FFFFFF", bordercolor=LINE),
 )
 pio.templates["idap"] = _template
 pio.templates.default = "idap"

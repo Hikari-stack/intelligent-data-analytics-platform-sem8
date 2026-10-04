@@ -27,7 +27,7 @@ def render():
 
     left, right = st.columns([3, 2], gap="large")
     with left:
-        t1, t2, t3 = st.tabs(["✨ Suggested fixes", "🛠 Manual tools", "🎯 Outliers"])
+        t1, t2, t3 = st.tabs(["Suggested fixes", "Manual tools", "Outliers"])
         with t1:
             _suggestions(df, steps)
         with t2:
@@ -59,7 +59,7 @@ def render():
 def _suggestions(df, steps):
     suggestions = suggest_fixes(state.current_profile())
     if not suggestions:
-        st.success("No more issues found. Your data looks clean.", icon="✅")
+        st.success("No more issues found. Your data looks clean.")
         return
     st.caption("After applying, new suggestions may appear (e.g. filling missing values once a column is converted).")
     st.button(f"Apply all {len(suggestions)} suggestions", on_click=state.cb_apply_all, args=(suggestions,),
@@ -115,7 +115,7 @@ def _manual(df):
         kind = st.selectbox("Convert to", ["numbers", "dates", "True/False", "standardized categories"], key="m_cv_k")
         step = {"op": {"numbers": "convert_numeric", "dates": "convert_datetime", "True/False": "convert_boolean",
                        "standardized categories": "standardize_categories"}[kind], "col": c}
-    st.button("➕ Add to pipeline", on_click=state.cb_apply, args=(step,), type="primary", key="m_add")
+    st.button("Add to pipeline", on_click=state.cb_apply, args=(step,), type="primary", key="m_add")
 
 
 def _outliers(df):
@@ -137,7 +137,7 @@ def _outliers(df):
     b.button("Remove those rows", on_click=state.cb_apply, disabled=none,
              args=({"op": "drop_outlier_rows", "col": c, "method": method},), width="stretch", key="o_drop",
              help="Deletes the rows entirely. Use when the values are errors.")
-    with st.expander("🔬 Unusual rows across all columns together (Isolation Forest)"):
+    with st.expander("Unusual rows across all columns together (Isolation Forest)"):
         st.caption("A row can look normal in each column but be strange as a combination. This view is for review only.")
         rate = st.slider("Share of rows to flag", 0.5, 10.0, 2.0, 0.5, format="%.1f%%", key="o_rate")
         flagged = outliers.isolation_outliers(df, rate / 100)

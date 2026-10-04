@@ -10,21 +10,21 @@ sys.path.insert(0, str(ROOT))  # so `import core...` and `import app...` work wh
 
 import streamlit as st
 
-st.set_page_config(page_title="Intelligent Analytics", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Intelligent Analytics", page_icon=":material/analytics:", layout="wide")
 
 from app import state, ui
 from app.views import clean, dashboard, explore, export, history, insights, quality, upload
 import core.theme  # noqa: F401  (registers the shared Plotly template)
 
 PAGES = {  # label -> (module, stepper index or -1)
-    "📥  Upload": (upload, 0),
-    "🩺  Quality report": (quality, 1),
-    "🧹  Clean": (clean, 2),
-    "🔎  Explore": (explore, 3),
-    "🧠  Insights": (insights, 4),
-    "📌  Dashboard": (dashboard, -1),
-    "📦  Export & report": (export, 5),
-    "🕘  History": (history, -1),
+    "Upload": (upload, 0),
+    "Quality report": (quality, 1),
+    "Clean": (clean, 2),
+    "Explore": (explore, 3),
+    "Insights": (insights, 4),
+    "Dashboard": (dashboard, -1),
+    "Export & report": (export, 5),
+    "History": (history, -1),
 }
 
 state.init_state()

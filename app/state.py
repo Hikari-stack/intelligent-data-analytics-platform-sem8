@@ -64,7 +64,7 @@ def db_ready() -> bool:
 def require_data() -> bool:
     if st.session_state.raw_df is None:
         from app import ui
-        ui.empty_state("📥", "No dataset yet", "Upload a file or try the sample on the Upload page to unlock this step.")
+        ui.empty_state("No dataset yet", "Upload a file or try the sample on the Upload page to unlock this step.")
         return False
     return True
 
@@ -110,6 +110,6 @@ def pin(spec: dict):
     pins = st.session_state.pins
     if spec not in pins:
         pins.append(spec)
-        st.toast("Pinned to the Dashboard", icon="📌")
+        st.toast("Pinned to the Dashboard")
     else:
         st.toast("Already on the Dashboard", icon="ℹ️")

@@ -12,7 +12,7 @@ def render():
     if not state.require_data():
         return
     df = state.current_df()
-    t1, t2, t3 = st.tabs(["💬 Ask your data", "📈 Time series", "🤖 Predict (AutoML)"])
+    t1, t2, t3 = st.tabs(["Ask your data", "Time series", "Predict (AutoML)"])
     with t1:
         _ask(df)
     with t2:
@@ -49,7 +49,7 @@ def _ask(df):
     with st.expander("Show the code behind this answer"):
         st.code(a.code, language="python")
     if a.figure is not None:
-        st.button("📌 Pin answer to dashboard", on_click=state.pin, args=({"kind": "ask", "q": q.strip()},), key="ask_pin")
+        st.button("Pin answer to dashboard", on_click=state.pin, args=({"kind": "ask", "q": q.strip()},), key="ask_pin")
 
 
 def _time(df):
@@ -87,7 +87,7 @@ def _automl(df):
     task = automl.detect_task(df[t])
     c[1].markdown(f"<br>{ui.chip('classification' if task == 'classification' else 'regression (number)', 'info')}",
                   unsafe_allow_html=True)
-    if st.button("🚀 Train models", type="primary", key="am_go"):
+    if st.button("Train models", type="primary", key="am_go"):
         with st.spinner("Training and validating models..."):
             try:
                 st.session_state.automl = automl.run(df, t)
@@ -102,7 +102,7 @@ def _automl(df):
     for line in res.summary:
         st.markdown(f"- {line}")
     for w in res.warnings:
-        st.warning(w, icon="⚠️")
+        st.warning(w)
     a, b = st.columns([3, 2], gap="large")
     with a:
         st.subheader("Model comparison")

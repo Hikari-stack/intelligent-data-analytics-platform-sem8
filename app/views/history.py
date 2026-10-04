@@ -14,7 +14,7 @@ def render():
         with SessionLocal() as db:
             datasets = list_datasets(db)
             if not datasets:
-                ui.empty_state("🕘", "Nothing saved yet", "Clean a dataset, then use Save to history on the Export page.")
+                ui.empty_state("Nothing saved yet", "Clean a dataset, then use Save to history on the Export page.")
                 return
             rows = pd.DataFrame([{"id": d.id, "name": d.name, "rows": d.n_rows, "columns": d.n_cols,
                                   "saved": d.created_at.strftime("%Y-%m-%d %H:%M")} for d in datasets])

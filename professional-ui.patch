@@ -1,0 +1,756 @@
+diff --git a/.streamlit/config.toml b/.streamlit/config.toml
+index e3f9958..f6dad43 100644
+--- a/.streamlit/config.toml
++++ b/.streamlit/config.toml
+@@ -3,8 +3,11 @@ maxUploadSize = 100
+ 
+ [theme]
+ base = "light"
+-primaryColor = "#4F46E5"
+-backgroundColor = "#FFFFFF"
+-secondaryBackgroundColor = "#F8FAFC"
+-textColor = "#0F172A"
++primaryColor = "#1E5A78"
++backgroundColor = "#FBFAF7"
++secondaryBackgroundColor = "#F3F1EB"
++textColor = "#1F2933"
+ font = "sans serif"
++baseRadius = "4px"
++borderColor = "#DAD6CE"
++showWidgetBorder = true
+diff --git a/app/main.py b/app/main.py
+index 9f00e04..afd2db7 100644
+--- a/app/main.py
++++ b/app/main.py
+@@ -10,21 +10,21 @@ sys.path.insert(0, str(ROOT))  # so `import core...` and `import app...` work wh
+ 
+ import streamlit as st
+ 
+-st.set_page_config(page_title="Intelligent Analytics", page_icon="📊", layout="wide")
++st.set_page_config(page_title="Intelligent Analytics", page_icon=":material/analytics:", layout="wide")
+ 
+ from app import state, ui
+ from app.views import clean, dashboard, explore, export, history, insights, quality, upload
+ import core.theme  # noqa: F401  (registers the shared Plotly template)
+ 
+ PAGES = {  # label -> (module, stepper index or -1)
+-    "📥  Upload": (upload, 0),
+-    "🩺  Quality report": (quality, 1),
+-    "🧹  Clean": (clean, 2),
+-    "🔎  Explore": (explore, 3),
+-    "🧠  Insights": (insights, 4),
+-    "📌  Dashboard": (dashboard, -1),
+-    "📦  Export & report": (export, 5),
+-    "🕘  History": (history, -1),
++    "Upload": (upload, 0),
++    "Quality report": (quality, 1),
++    "Clean": (clean, 2),
++    "Explore": (explore, 3),
++    "Insights": (insights, 4),
++    "Dashboard": (dashboard, -1),
++    "Export & report": (export, 5),
++    "History": (history, -1),
+ }
+ 
+ state.init_state()
+diff --git a/app/state.py b/app/state.py
+index 7bd8661..d942c10 100644
+--- a/app/state.py
++++ b/app/state.py
+@@ -64,7 +64,7 @@ def db_ready() -> bool:
+ def require_data() -> bool:
+     if st.session_state.raw_df is None:
+         from app import ui
+-        ui.empty_state("📥", "No dataset yet", "Upload a file or try the sample on the Upload page to unlock this step.")
++        ui.empty_state("No dataset yet", "Upload a file or try the sample on the Upload page to unlock this step.")
+         return False
+     return True
+ 
+@@ -110,6 +110,6 @@ def pin(spec: dict):
+     pins = st.session_state.pins
+     if spec not in pins:
+         pins.append(spec)
+-        st.toast("Pinned to the Dashboard", icon="📌")
++        st.toast("Pinned to the Dashboard")
+     else:
+         st.toast("Already on the Dashboard", icon="ℹ️")
+diff --git a/app/ui.py b/app/ui.py
+index cc33ec8..0d90150 100644
+--- a/app/ui.py
++++ b/app/ui.py
+@@ -6,72 +6,84 @@ import html
+ import plotly.graph_objects as go
+ import streamlit as st
+ 
+-from core.theme import ACCENT, BAD, GOOD, LINE, MUTED, WARN
++from core.theme import ACCENT, BAD, GOOD, INK, LINE, MUTED, WARN
+ 
+ CSS = """
+ <style>
+-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+-html, body, [class*="css"], .stMarkdown, button, input, textarea { font-family: 'Inter', sans-serif; }
++@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap');
++:root {
++  --ink:#1F2933; --muted:#5F6B76; --line:#DAD6CE; --paper:#FBFAF7; --panel:#F3F1EB;
++  --accent:#1E5A78; --accent-soft:#E4EEF3;
++  --good:#3F7D58; --warn:#B7791F; --bad:#B3412F;
++}
++html, body, [class*="css"], .stMarkdown, button, input, textarea { font-family: 'IBM Plex Sans', sans-serif; }
+ #MainMenu, footer { visibility: hidden; }
+-.block-container { padding-top: 3.6rem; padding-bottom: 4rem; max-width: 1280px; }
+-h1, h2, h3 { letter-spacing: -0.02em; font-weight: 650; }
++.block-container { padding-top: 3.2rem; padding-bottom: 4rem; max-width: 1200px; }
++h1, h2, h3 { font-family: 'Source Serif 4', Georgia, serif; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
++h2, h3 { font-size: 1.3rem; }
+ 
+ /* sidebar */
+-section[data-testid="stSidebar"] { background: #0F172A; }
+-section[data-testid="stSidebar"] * { color: #E2E8F0; }
+-section[data-testid="stSidebar"] hr { border-color: #1E293B; }
+-section[data-testid="stSidebar"] .stRadio label { padding: 6px 10px; border-radius: 8px; width: 100%; }
+-section[data-testid="stSidebar"] .stRadio label:hover { background: #1E293B; }
+-.brand { display:flex; align-items:center; gap:10px; margin: 4px 0 14px; }
+-.brand .logo { width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,#6366F1,#06B6D4);
+-  display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff !important; }
+-.brand b { font-size: 15px; line-height:1.1; } .brand span { font-size: 11px; color:#94A3B8 !important; }
+-.side-card { background:#1E293B; border-radius:12px; padding:12px 14px; margin-top:10px; font-size:13px; }
+-.side-card small { color:#94A3B8 !important; }
++section[data-testid="stSidebar"] { background: var(--panel); border-right: 1px solid var(--line); }
++section[data-testid="stSidebar"] hr { border-color: var(--line); }
++section[data-testid="stSidebar"] .stRadio label { padding: 5px 10px; border-radius: 4px; width: 100%; font-size: 14.5px; }
++section[data-testid="stSidebar"] .stRadio label:hover { background: #E8E5DC; }
++.brand { margin: 2px 0 18px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
++.brand b { font-family: 'Source Serif 4', Georgia, serif; font-size: 18px; font-weight: 600; display:block; line-height:1.2; }
++.brand span { font-size: 12.5px; color: var(--muted); }
++.side-card { border:1px solid var(--line); background: var(--paper); border-radius:4px; padding:10px 12px; margin-top:12px; font-size:13px; line-height:1.5; }
++.side-card small { color: var(--muted); }
+ 
+ /* page header */
+-.page-head { margin-bottom: 1.1rem; }
+-.page-head h1 { font-size: 1.85rem; margin: 0; }
+-.page-head p { color: #64748B; margin: 4px 0 0; font-size: 0.97rem; }
++.page-head { margin-bottom: 1.2rem; }
++.page-head h1 { font-size: 2rem; margin: 0; }
++.page-head p { color: var(--muted); margin: 6px 0 0; font-size: 1rem; max-width: 720px; }
+ 
+ /* stepper */
+-.stepper { display:flex; gap:6px; margin: 0 0 1.4rem; flex-wrap: wrap; }
+-.step { flex:1; min-width:120px; padding:9px 12px; border-radius:10px; border:1px solid #E2E8F0; background:#fff;
+-  font-size:13px; display:flex; align-items:center; gap:8px; color:#64748B; }
+-.step i { font-style:normal; width:22px; height:22px; border-radius:50%; background:#F1F5F9; display:flex;
+-  align-items:center; justify-content:center; font-size:11px; font-weight:600; flex:none; }
+-.step.done { color:#0F172A; } .step.done i { background:#D1FAE5; color:#047857; }
+-.step.now { border-color:#4F46E5; box-shadow:0 0 0 3px #EEF2FF; color:#0F172A; font-weight:600; }
+-.step.now i { background:#4F46E5; color:#fff; } .step.lock { opacity:.55; }
+-
+-/* cards */
+-.card { border:1px solid #E2E8F0; border-radius:14px; padding:16px 18px; background:#fff; height:100%;
+-  box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+-.card h4 { margin:0 0 4px; font-size:15px; } .card p { margin:0; color:#64748B; font-size:13.5px; }
+-.card .ic { font-size:22px; margin-bottom:8px; }
+-.hero { border-radius:18px; padding:34px 34px 30px; margin-bottom:1.2rem; color:#fff;
+-  background: radial-gradient(1200px 400px at 90% -20%, #22D3EE55, transparent), linear-gradient(135deg,#312E81,#4F46E5 55%,#6366F1); }
+-.hero h1 { color:#fff; font-size:2.1rem; margin:0 0 8px; } .hero p { color:#E0E7FF; font-size:1.02rem; max-width:680px; margin:0; }
+-.chip { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:500; margin:2px 4px 2px 0; }
+-.chip.ok { background:#D1FAE5; color:#047857; } .chip.warn { background:#FEF3C7; color:#B45309; }
+-.chip.bad { background:#FEE2E2; color:#B91C1C; } .chip.info { background:#E0E7FF; color:#4338CA; }
+-.chip.mute { background:#F1F5F9; color:#475569; }
+-.kpi { border:1px solid #E2E8F0; border-radius:14px; padding:14px 16px; background:#fff; }
+-.kpi span { font-size:12px; color:#64748B; text-transform:uppercase; letter-spacing:.05em; }
+-.kpi b { display:block; font-size:1.55rem; margin-top:2px; letter-spacing:-.02em; }
+-.kpi small { color:#64748B; }
+-.timeline { border-left:2px solid #E2E8F0; margin-left:8px; padding-left:16px; }
+-.timeline .t { position:relative; margin:0 0 12px; font-size:14px; }
+-.timeline .t::before { content:''; position:absolute; left:-23px; top:5px; width:10px; height:10px; border-radius:50%;
+-  background:#4F46E5; box-shadow:0 0 0 3px #EEF2FF; }
+-.answer { border-left:4px solid #4F46E5; background:#F8FAFC; padding:14px 18px; border-radius:0 12px 12px 0; font-size:1.02rem; }
+-div[data-testid="stMetric"] { background:#fff; border:1px solid #E2E8F0; border-radius:14px; padding:12px 16px; }
+-.stButton > button, .stDownloadButton > button { border-radius:10px; font-weight:500; }
++.stepper { display:flex; margin: 0 0 1.6rem; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
++.step { padding: 8px 18px 10px 0; margin-right: 18px; font-size: 13.5px; color: var(--muted);
++  display:flex; align-items:center; gap:7px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
++.step i { font-style: normal; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
++.step.done { color: var(--ink); } .step.done i { color: var(--good); }
++.step.now { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
++.step.now i { color: var(--accent); }
++.step.lock { opacity: .5; }
++
++/* cards and panels */
++.card { border-top: 2px solid var(--ink); padding: 12px 2px 4px; height:100%; }
++.card h4 { margin:0 0 4px; font-size:15.5px; font-weight:600; font-family:'IBM Plex Sans',sans-serif; }
++.card p { margin:0; color: var(--muted); font-size:14px; line-height:1.5; }
++.card.empty { border:1px dashed var(--line); border-radius:4px; text-align:center; padding:40px 20px; }
++.card.empty h4 { font-family:'Source Serif 4', Georgia, serif; font-size:18px; }
++.intro { padding: 4px 0 22px; margin-bottom: 1.4rem; border-bottom: 1px solid var(--line); }
++.intro h1 { font-size: 2.3rem; margin: 0 0 10px; line-height: 1.15; }
++.intro p { color: var(--muted); font-size: 1.05rem; max-width: 660px; margin: 0; line-height: 1.55; }
++.chip { display:inline-block; padding:1px 8px; border-radius:3px; font-size:12px; font-weight:500; margin:2px 4px 2px 0; border:1px solid transparent; }
++.chip.ok { background:#E6F0EA; color:#2F6244; } .chip.warn { background:#F8EEDB; color:#8A5A12; }
++.chip.bad { background:#F5E3DF; color:#8E2F20; } .chip.info { background: var(--accent-soft); color: var(--accent); }
++.chip.mute { background:#EDEAE2; color:#4A545E; }
++.kpi { border:1px solid var(--line); border-radius:4px; padding:12px 14px; background:#fff; min-height:98px; margin-bottom:14px; }
++.score { border:1px solid var(--line); border-radius:4px; background:#fff; padding:16px 20px; min-height:98px; margin-bottom:14px; }
++.score span { font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
++.score b { display:block; font-family:'Source Serif 4',Georgia,serif; font-size:2.6rem; line-height:1.1; margin:2px 0 10px; font-variant-numeric:tabular-nums; }
++.score b small { font-size:1rem; color:var(--muted); font-family:'IBM Plex Sans',sans-serif; font-weight:400; }
++.score .bar { height:6px; background:#ECE9E2; border-radius:3px; overflow:hidden; }
++.score .bar div { height:100%; }
++.score em { display:block; font-style:normal; font-size:13px; color:var(--muted); margin-top:8px; }
++.kpi span { font-size:11.5px; color: var(--muted); text-transform:uppercase; letter-spacing:.06em; }
++.kpi b { display:block; font-size:1.5rem; margin-top:2px; font-weight:600; font-variant-numeric: tabular-nums; }
++.kpi small { color: var(--muted); }
++.timeline { border-left:1px solid var(--line); margin-left:6px; padding-left:16px; }
++.timeline .t { position:relative; margin:0 0 10px; font-size:14px; }
++.timeline .t::before { content:''; position:absolute; left:-21px; top:7px; width:7px; height:7px; border-radius:50%; background: var(--accent); }
++.answer { border-left:3px solid var(--accent); background: var(--panel); padding:12px 16px; border-radius:0 4px 4px 0; font-size:1.02rem; }
++div[data-testid="stMetric"] { background:#fff; border:1px solid var(--line); border-radius:4px; padding:10px 14px; }
++.stButton > button, .stDownloadButton > button { border-radius:4px; font-weight:500; }
++div[data-testid="stAlert"] { border-radius:4px; }
+ div[data-testid="stTabs"] button { font-weight:500; }
+ </style>
+ """
+ 
+-STEPS = [("Upload", "📥"), ("Quality", "🩺"), ("Clean", "🧹"), ("Explore", "🔎"), ("Insights", "🧠"), ("Export", "📦")]
++STEPS = ["Upload", "Quality", "Clean", "Explore", "Insights", "Export"]
+ 
+ 
+ def inject_css():
+@@ -79,8 +91,8 @@ def inject_css():
+ 
+ 
+ def sidebar_brand():
+-    st.sidebar.markdown("<div class='brand'><div class='logo'>IA</div><div><b>Intelligent Analytics</b><br>"
+-                        "<span>Guided &amp; explainable</span></div></div>", unsafe_allow_html=True)
++    st.sidebar.markdown("<div class='brand'><b>Intelligent Data Analytics</b>"
++                        "<span>Check, clean and explain your data</span></div>", unsafe_allow_html=True)
+ 
+ 
+ def sidebar_dataset(name: str | None, rows: int | None, cols: int | None, steps: int, score: float | None):
+@@ -99,18 +111,24 @@ def page_header(title: str, subtitle: str = ""):
+                 f"{f'<p>{html.escape(subtitle)}</p>' if subtitle else ''}</div>", unsafe_allow_html=True)
+ 
+ 
++def intro(title: str, text: str):
++    st.markdown(f"<div class='intro'><h1>{html.escape(title)}</h1><p>{html.escape(text)}</p></div>",
++                unsafe_allow_html=True)
++
++
+ def stepper(current: int, has_data: bool, cleaned: bool):
+     out = []
+-    for i, (label, icon) in enumerate(STEPS):
++    for i, label in enumerate(STEPS):
+         done = (i == 0 and has_data) or (i == 2 and cleaned) or (has_data and i < current and i != 2)
+         cls = "now" if i == current else "done" if done else ("lock" if not has_data and i > 0 else "")
+-        out.append(f"<div class='step {cls}'><i>{'✓' if done and i != current else i + 1}</i>{icon} {label}</div>")
++        mark = "✓" if done and i != current else f"{i + 1}."
++        out.append(f"<div class='step {cls}'><i>{mark}</i>{label}</div>")
+     st.markdown(f"<div class='stepper'>{''.join(out)}</div>", unsafe_allow_html=True)
+ 
+ 
+-def card(icon: str, title: str, text: str):
+-    st.markdown(f"<div class='card'><div class='ic'>{icon}</div><h4>{html.escape(title)}</h4>"
+-                f"<p>{html.escape(text)}</p></div>", unsafe_allow_html=True)
++def card(title: str, text: str):
++    st.markdown(f"<div class='card'><h4>{html.escape(title)}</h4><p>{html.escape(text)}</p></div>",
++                unsafe_allow_html=True)
+ 
+ 
+ def kpi(label: str, value, sub: str = ""):
+@@ -126,14 +144,28 @@ def chips(items: list[tuple[str, str]]):
+     st.markdown("".join(chip(t, k) for t, k in items), unsafe_allow_html=True)
+ 
+ 
++def score_block(score: float, title: str = "Quality score"):
++    """Plain score readout with a thin progress bar and a one-line verdict."""
++    color = GOOD if score >= 80 else WARN if score >= 55 else BAD
++    verdict = "Good shape" if score >= 80 else "Usable, but needs cleaning" if score >= 55 else "Needs significant cleaning"
++    st.markdown(f"<div class='score'><span>{html.escape(title)}</span>"
++                f"<b style='color:{color}'>{score:g}<small> / 100</small></b>"
++                f"<div class='bar'><div style='width:{max(0, min(100, score))}%;background:{color}'></div></div>"
++                f"<em>{verdict}</em></div>", unsafe_allow_html=True)
++
++
+ def gauge(score: float, title: str = "Quality score", height: int = 210):
++    """Horizontal bullet gauge: easier to read than a dial and closer to a report figure."""
+     color = GOOD if score >= 80 else WARN if score >= 55 else BAD
+     fig = go.Figure(go.Indicator(
+-        mode="gauge+number", value=score, number={"suffix": "/100", "font": {"size": 32, "color": "#0F172A"}},
++        mode="number+gauge", value=score, number={"suffix": " / 100", "font": {"size": 34, "color": INK}},
+         title={"text": title, "font": {"size": 14, "color": MUTED}},
+-        gauge={"axis": {"range": [0, 100], "tickwidth": 0, "showticklabels": False},
+-               "bar": {"color": color, "thickness": 0.28}, "bgcolor": "#F1F5F9", "borderwidth": 0}))
+-    fig.update_layout(height=height, margin=dict(l=30, r=30, t=50, b=10), paper_bgcolor="rgba(0,0,0,0)")
++        gauge={"shape": "bullet", "axis": {"range": [0, 100], "tickvals": [0, 55, 80, 100],
++                                           "tickfont": {"size": 11, "color": MUTED}},
++               "bar": {"color": color, "thickness": 0.45}, "bgcolor": "#fff", "borderwidth": 0,
++               "steps": [{"range": [0, 55], "color": "#F1E1DC"}, {"range": [55, 80], "color": "#F3EAD3"},
++                         {"range": [80, 100], "color": "#E2EDE5"}]}))
++    fig.update_layout(height=min(height, 170), margin=dict(l=20, r=30, t=50, b=30), paper_bgcolor="rgba(0,0,0,0)")
+     return fig
+ 
+ 
+@@ -151,6 +183,6 @@ def answer_box(md_text: str):
+     st.markdown(f"<div class='answer'>{safe}</div>", unsafe_allow_html=True)
+ 
+ 
+-def empty_state(icon: str, title: str, text: str):
+-    st.markdown(f"<div class='card' style='text-align:center;padding:42px'><div style='font-size:40px'>{icon}</div>"
+-                f"<h4 style='margin-top:6px'>{html.escape(title)}</h4><p>{html.escape(text)}</p></div>", unsafe_allow_html=True)
++def empty_state(title: str, text: str):
++    st.markdown(f"<div class='card empty'><h4>{html.escape(title)}</h4><p>{html.escape(text)}</p></div>",
++                unsafe_allow_html=True)
+diff --git a/app/views/clean.py b/app/views/clean.py
+index 5c463d1..6093c4d 100644
+--- a/app/views/clean.py
++++ b/app/views/clean.py
+@@ -27,7 +27,7 @@ def render():
+ 
+     left, right = st.columns([3, 2], gap="large")
+     with left:
+-        t1, t2, t3 = st.tabs(["✨ Suggested fixes", "🛠 Manual tools", "🎯 Outliers"])
++        t1, t2, t3 = st.tabs(["Suggested fixes", "Manual tools", "Outliers"])
+         with t1:
+             _suggestions(df, steps)
+         with t2:
+@@ -59,7 +59,7 @@ def render():
+ def _suggestions(df, steps):
+     suggestions = suggest_fixes(state.current_profile())
+     if not suggestions:
+-        st.success("No more issues found. Your data looks clean.", icon="✅")
++        st.success("No more issues found. Your data looks clean.")
+         return
+     st.caption("After applying, new suggestions may appear (e.g. filling missing values once a column is converted).")
+     st.button(f"Apply all {len(suggestions)} suggestions", on_click=state.cb_apply_all, args=(suggestions,),
+@@ -115,7 +115,7 @@ def _manual(df):
+         kind = st.selectbox("Convert to", ["numbers", "dates", "True/False", "standardized categories"], key="m_cv_k")
+         step = {"op": {"numbers": "convert_numeric", "dates": "convert_datetime", "True/False": "convert_boolean",
+                        "standardized categories": "standardize_categories"}[kind], "col": c}
+-    st.button("➕ Add to pipeline", on_click=state.cb_apply, args=(step,), type="primary", key="m_add")
++    st.button("Add to pipeline", on_click=state.cb_apply, args=(step,), type="primary", key="m_add")
+ 
+ 
+ def _outliers(df):
+@@ -137,7 +137,7 @@ def _outliers(df):
+     b.button("Remove those rows", on_click=state.cb_apply, disabled=none,
+              args=({"op": "drop_outlier_rows", "col": c, "method": method},), width="stretch", key="o_drop",
+              help="Deletes the rows entirely. Use when the values are errors.")
+-    with st.expander("🔬 Unusual rows across all columns together (Isolation Forest)"):
++    with st.expander("Unusual rows across all columns together (Isolation Forest)"):
+         st.caption("A row can look normal in each column but be strange as a combination. This view is for review only.")
+         rate = st.slider("Share of rows to flag", 0.5, 10.0, 2.0, 0.5, format="%.1f%%", key="o_rate")
+         flagged = outliers.isolation_outliers(df, rate / 100)
+diff --git a/app/views/dashboard.py b/app/views/dashboard.py
+index 60500e5..28a3a7e 100644
+--- a/app/views/dashboard.py
++++ b/app/views/dashboard.py
+@@ -7,7 +7,7 @@ from core.theme import style
+ 
+ 
+ def _filters(df: pd.DataFrame) -> pd.DataFrame:
+-    with st.expander("🎚 Dashboard filters", expanded=False):
++    with st.expander("Dashboard filters", expanded=False):
+         dts, cats = eda.datetime_cols(df), [c for c in eda.categorical_cols(df) if 2 <= df[c].nunique() <= 30][:3]
+         if dts:
+             d = dts[0]
+@@ -30,8 +30,8 @@ def render():
+     s = st.session_state
+     df = state.current_df()
+     if not s.pins:
+-        ui.empty_state("📌", "Nothing pinned yet",
+-                       "Use the 📌 button under any chart in Explore, or under an answer in Ask your data.")
++        ui.empty_state("Nothing pinned yet",
++                       "Use the Pin button under any chart in Explore, or under an answer in Ask your data.")
+     view = _filters(df)
+     st.caption(f"Showing {len(view):,} of {len(df):,} rows")
+     nums = eda.numeric_cols(view)[:4]
+diff --git a/app/views/explore.py b/app/views/explore.py
+index 3aeffc4..7f410cb 100644
+--- a/app/views/explore.py
++++ b/app/views/explore.py
+@@ -15,7 +15,7 @@ def render():
+     df, s = state.current_df(), st.session_state
+     ui.chips([(f"Using cleaned data · {len(s.steps)} steps" if s.steps else "Using the original data · clean it first for better results",
+                "ok" if s.steps else "warn")])
+-    t1, t2, t3, t4, t5 = st.tabs(["📋 Overview", "🔬 Column drill-down", "🔗 Correlations", "📊 Chart builder", "🗂 Data table"])
++    t1, t2, t3, t4, t5 = st.tabs(["Overview", "Column drill-down", "Correlations", "Chart builder", "Data table"])
+     with t1:
+         _overview(df)
+     with t2:
+@@ -46,7 +46,7 @@ def _overview(df):
+     for line in insights or ["No notable patterns found."]:
+         st.markdown(f"- {line}")
+     for w in warnings:
+-        st.warning(w, icon="⚠️")
++        st.warning(w)
+     a, b = st.columns(2)
+     with a:
+         st.subheader("Numeric summary")
+@@ -79,7 +79,7 @@ def _drilldown(df):
+     fig = eda.chart_for(df, col)
+     if fig is not None:
+         st.plotly_chart(style(fig, 360), width="stretch")
+-        st.button("📌 Pin to dashboard", key="dd_pin", on_click=state.pin, args=({"kind": "chart", "x": col, "y": None},))
++        st.button("Pin to dashboard", key="dd_pin", on_click=state.pin, args=({"kind": "chart", "x": col, "y": None},))
+     if not pd.api.types.is_numeric_dtype(s):
+         st.dataframe(s.value_counts(dropna=False).head(30).rename("rows").reset_index(), hide_index=True,
+                      width="stretch")
+@@ -96,7 +96,7 @@ def _builder(df):
+         st.info("No suitable chart for that combination. Try a different pair.")
+         return
+     st.plotly_chart(style(fig, 440), width="stretch")
+-    st.button("📌 Pin to dashboard", key="cb_pin", on_click=state.pin, args=({"kind": "chart", "x": x, "y": yy},))
++    st.button("Pin to dashboard", key="cb_pin", on_click=state.pin, args=({"kind": "chart", "x": x, "y": yy},))
+ 
+ 
+ def _table(df):
+diff --git a/app/views/export.py b/app/views/export.py
+index 02680d0..03abc20 100644
+--- a/app/views/export.py
++++ b/app/views/export.py
+@@ -59,7 +59,7 @@ def render():
+     st.caption("A single HTML file with the quality scores, cleaning log, insights, cautions and charts. "
+                "Open it in a browser or print it to PDF. Charts load their library from the internet.")
+     inc = st.checkbox("Include the latest predictive model summary", value=s.automl is not None, disabled=s.automl is None)
+-    if st.button("📄 Build report", type="primary"):
++    if st.button("Build report", type="primary"):
+         with st.spinner("Building report..."):
+             extra = []
+             html_doc = report.build_html(df, raw, steps, prof_before, prof_after, s.filename or "dataset", extra,
+@@ -72,7 +72,7 @@ def render():
+     st.subheader("Save to history")
+     name = st.text_input("Pipeline name", value="My cleaning pipeline")
+     note = st.text_input("Tag or note (optional)", placeholder="e.g. Q3 sales, monthly refresh")
+-    if st.button("💾 Save dataset and pipeline", disabled=not steps):
++    if st.button("Save dataset and pipeline", disabled=not steps):
+         try:
+             state.db_ready()
+             title = (name.strip() or "Untitled") + (f" [{note.strip()}]" if note.strip() else "")
+@@ -80,6 +80,6 @@ def render():
+                 if s.dataset_id is None:
+                     s.dataset_id = save_dataset(db, s.filename, raw)
+                 save_pipeline(db, s.dataset_id, title, steps)
+-            st.toast("Saved to History", icon="✅")
++            st.toast("Saved to History")
+         except Exception as e:
+             st.error(f"Could not save to the database: {e}")
+diff --git a/app/views/history.py b/app/views/history.py
+index 106d6b1..2f4da83 100644
+--- a/app/views/history.py
++++ b/app/views/history.py
+@@ -14,7 +14,7 @@ def render():
+         with SessionLocal() as db:
+             datasets = list_datasets(db)
+             if not datasets:
+-                ui.empty_state("🕘", "Nothing saved yet", "Clean a dataset, then use Save to history on the Export page.")
++                ui.empty_state("Nothing saved yet", "Clean a dataset, then use Save to history on the Export page.")
+                 return
+             rows = pd.DataFrame([{"id": d.id, "name": d.name, "rows": d.n_rows, "columns": d.n_cols,
+                                   "saved": d.created_at.strftime("%Y-%m-%d %H:%M")} for d in datasets])
+diff --git a/app/views/insights.py b/app/views/insights.py
+index bf82d52..fa38bcf 100644
+--- a/app/views/insights.py
++++ b/app/views/insights.py
+@@ -12,7 +12,7 @@ def render():
+     if not state.require_data():
+         return
+     df = state.current_df()
+-    t1, t2, t3 = st.tabs(["💬 Ask your data", "📈 Time series", "🤖 Predict (AutoML)"])
++    t1, t2, t3 = st.tabs(["Ask your data", "Time series", "Predict (AutoML)"])
+     with t1:
+         _ask(df)
+     with t2:
+@@ -49,7 +49,7 @@ def _ask(df):
+     with st.expander("Show the code behind this answer"):
+         st.code(a.code, language="python")
+     if a.figure is not None:
+-        st.button("📌 Pin answer to dashboard", on_click=state.pin, args=({"kind": "ask", "q": q.strip()},), key="ask_pin")
++        st.button("Pin answer to dashboard", on_click=state.pin, args=({"kind": "ask", "q": q.strip()},), key="ask_pin")
+ 
+ 
+ def _time(df):
+@@ -87,7 +87,7 @@ def _automl(df):
+     task = automl.detect_task(df[t])
+     c[1].markdown(f"<br>{ui.chip('classification' if task == 'classification' else 'regression (number)', 'info')}",
+                   unsafe_allow_html=True)
+-    if st.button("🚀 Train models", type="primary", key="am_go"):
++    if st.button("Train models", type="primary", key="am_go"):
+         with st.spinner("Training and validating models..."):
+             try:
+                 st.session_state.automl = automl.run(df, t)
+@@ -102,7 +102,7 @@ def _automl(df):
+     for line in res.summary:
+         st.markdown(f"- {line}")
+     for w in res.warnings:
+-        st.warning(w, icon="⚠️")
++        st.warning(w)
+     a, b = st.columns([3, 2], gap="large")
+     with a:
+         st.subheader("Model comparison")
+diff --git a/app/views/quality.py b/app/views/quality.py
+index 67b0a8e..2c3dc43 100644
+--- a/app/views/quality.py
++++ b/app/views/quality.py
+@@ -26,15 +26,14 @@ def render_profile(df: pd.DataFrame, title: str, skey: str, compact: bool = Fals
+     ov = prof["overview"]
+     if title:
+         st.subheader(title)
+-    g, k = st.columns([1, 2], gap="large") if not compact else (st.container(), st.container())
++    g, k = st.columns([1, 2], gap="medium") if not compact else (st.container(), st.container())
+     with g:
+-        st.plotly_chart(ui.gauge(ov["quality_score"], height=190 if compact else 230), width="stretch",
+-                        key=f"gauge_{title}_{skey[:20]}")
++        ui.score_block(ov["quality_score"])
+     with k:
+         c = st.columns(2 if compact else 4)
+         items = [("Rows", f"{ov['rows']:,}", ""), ("Duplicate rows", ov["duplicate_rows"], ""),
+                  ("Missing cells", f"{ov['missing_cells']:,}", f"{ov['missing_pct']}% of all cells"),
+-                 ("Columns with issues", ov["flagged_columns"], f"of {ov['columns']}")]
++                 ("Flagged columns", ov["flagged_columns"], f"of {ov['columns']}")]
+         for idx, (a, b, sub) in enumerate(items):
+             with c[idx % len(c)]:
+                 ui.kpi(a, b, sub)
+@@ -43,7 +42,7 @@ def render_profile(df: pd.DataFrame, title: str, skey: str, compact: bool = Fals
+     for name, i in prof["columns"].items():
+         iss = issues_for(i)
+         rows.append({"column": name, "type": KIND_LABEL.get(i["kind"], i["kind"]), "missing %": i["missing_pct"],
+-                     "unique": i["unique"], "issues": " · ".join(t for t, _ in iss) or "✓ none"})
++                     "unique": i["unique"], "issues": " · ".join(t for t, _ in iss) or "none"})
+     st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch",
+                  column_config={"missing %": st.column_config.ProgressColumn("missing %", min_value=0, max_value=100,
+                                                                               format="%.1f%%"),
+@@ -67,4 +66,4 @@ def render():
+         a, b = st.columns([1, 3])
+         a.markdown(f"**{name}**")
+         b.markdown("".join(ui.chip(t, k) for t, k in iss), unsafe_allow_html=True)
+-    st.info("Go to **Clean** to review one-click fixes for these problems.", icon="🧹")
++    st.info("Go to **Clean** to review one-click fixes for these problems.")
+diff --git a/app/views/upload.py b/app/views/upload.py
+index afe746c..39d0bf6 100644
+--- a/app/views/upload.py
++++ b/app/views/upload.py
+@@ -15,15 +15,14 @@ SAMPLE_PATH = Path(__file__).resolve().parents[2] / "data" / "samples" / "messy_
+ def render():
+     s = st.session_state
+     if s.raw_df is None:
+-        st.markdown("<div class='hero'><h1>From messy file to clear answers</h1>"
+-                    "<p>Upload a spreadsheet, see exactly what is wrong with it, fix it with one click, and ask "
+-                    "questions in plain English. Every step is explained and can be replayed on the next file.</p></div>",
+-                    unsafe_allow_html=True)
++        ui.intro("From messy file to clear answers",
++                 "Upload a spreadsheet, see exactly what is wrong with it, fix it with one click, and ask "
++                 "questions in plain English. Every step is explained and can be replayed on the next file.")
+         c = st.columns(4)
+-        with c[0]: ui.card("🩺", "Quality report", "A 0–100 score and a plain-language list of what is wrong.")
+-        with c[1]: ui.card("🧹", "Guided cleaning", "One-click fixes with reasons, undo/redo and a replayable log.")
+-        with c[2]: ui.card("🧠", "Ask your data", "Type a question. Get an answer, a chart and the code behind it.")
+-        with c[3]: ui.card("🤖", "Predict", "Train baseline models and get warned when not to trust them.")
++        with c[0]: ui.card("Quality report", "A 0–100 score and a plain-language list of what is wrong.")
++        with c[1]: ui.card("Guided cleaning", "One-click fixes with reasons, undo/redo and a replayable log.")
++        with c[2]: ui.card("Ask your data", "Type a question. Get an answer, a chart and the code behind it.")
++        with c[3]: ui.card("Predict", "Train baseline models and get warned when not to trust them.")
+         st.write("")
+     else:
+         ui.page_header("Upload", "Load a different file at any time. Your cleaning steps reset for the new dataset.")
+@@ -49,12 +48,12 @@ def render():
+                     label = up.name if sheet is None else f"{up.name} [{sheet}]"
+                     state.set_dataset(load_file(data, up.name, sheet=sheet), label)
+                     s.last_upload_key = key
+-                    st.toast(f"Loaded {label}", icon="✅")
++                    st.toast(f"Loaded {label}")
+                 except IngestError as e:
+                     st.error(str(e))
+     with right:
+         st.markdown("**No file handy?**")
+-        if st.button("✨ Use the sample messy dataset", width="stretch"):
++        if st.button("Use the sample messy dataset", width="stretch"):
+             state.set_dataset(load_file(io.BytesIO(SAMPLE_PATH.read_bytes()), SAMPLE_PATH.name), SAMPLE_PATH.name)
+             s.last_upload_key = None
+             st.rerun()
+@@ -73,7 +72,7 @@ def render():
+     with c[2]: ui.kpi("Missing cells", f"{int(df.isna().sum().sum()):,}")
+     with c[3]: ui.kpi("Memory", f"{df.memory_usage(deep=True).sum() / 1e6:.1f} MB")
+     st.write("")
+-    q = st.text_input("🔍 Search the preview", placeholder="Type to filter rows (searches every column)")
++    q = st.text_input("Search the preview", placeholder="Type to filter rows (searches every column)")
+     view = df
+     if q:
+         mask = df.astype(str).apply(lambda col: col.str.contains(q, case=False, regex=False)).any(axis=1)
+@@ -84,7 +83,7 @@ def render():
+         st.caption("Text columns may secretly be numbers or dates; the Quality Report finds these.")
+         st.dataframe(pd.DataFrame({"dtype": df.dtypes.astype(str), "non-empty": df.notna().sum()}),
+                      width="stretch")
+-    st.success("Next: open **Quality Report** in the sidebar to see what needs fixing.", icon="➡️")
++    st.success("Next: open **Quality report** in the sidebar to see what needs fixing.")
+ 
+ 
+ def _recent():
+@@ -95,7 +94,7 @@ def _recent():
+         if rows:
+             st.markdown("**Recent datasets**")
+             for d in rows:
+-                st.caption(f"📄 {d.name} · {d.n_rows:,} rows · {d.created_at:%d %b %H:%M}")
++                st.caption(f"{d.name} · {d.n_rows:,} rows · {d.created_at:%d %b %H:%M}")
+             st.caption("Open the History page to load one.")
+     except Exception:
+         pass
+diff --git a/core/eda.py b/core/eda.py
+index d9fd42e..fe66613 100644
+--- a/core/eda.py
++++ b/core/eda.py
+@@ -157,7 +157,7 @@ def chart_for(df: pd.DataFrame, x: str, y: str | None = None):
+             m, b = np.polyfit(d[x], d[y], 1)
+             xs = np.array([d[x].min(), d[x].max()])
+             fig.add_trace(go.Scatter(x=xs, y=m * xs + b, mode="lines", name="trend",
+-                                     line=dict(color="#EF4444")))
++                                     line=dict(color="#B3412F")))
+         return fig
+     if x in dt and y in num:
+         d = df[[x, y]].dropna().sort_values(x)
+@@ -201,7 +201,7 @@ def missing_matrix(df: pd.DataFrame, max_rows: int = 300):
+     sample = df.sample(min(len(df), max_rows), random_state=0) if len(df) > max_rows else df
+     fig = px.imshow(sample.isna().astype(int).values, aspect="auto",
+                     labels=dict(x="column", y="row", color="missing"),
+-                    x=list(sample.columns), color_continuous_scale=["#EEF2FF", "#EF4444"],
++                    x=list(sample.columns), color_continuous_scale=["#F3E4DF", "#B3412F"],
+                     title="Missing values (dark = missing)")
+     fig.update_coloraxes(showscale=False)
+     return fig
+diff --git a/core/report.py b/core/report.py
+index 3966ef5..139013f 100644
+--- a/core/report.py
++++ b/core/report.py
+@@ -11,14 +11,14 @@ from core.profile import describe_step
+ from core.theme import style
+ 
+ CSS = """
+-body{font-family:Inter,-apple-system,Segoe UI,Roboto,sans-serif;color:#0F172A;max-width:1000px;margin:32px auto;padding:0 20px;line-height:1.55}
+-h1{font-size:28px;margin-bottom:0}h2{margin-top:36px;border-bottom:2px solid #E2E8F0;padding-bottom:6px;font-size:20px}
+-.sub{color:#64748B;margin-top:4px}.kpis{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+-.kpi{flex:1;min-width:140px;border:1px solid #E2E8F0;border-radius:12px;padding:14px 16px;background:#F8FAFC}
+-.kpi b{display:block;font-size:24px;color:#4F46E5}.kpi span{font-size:12px;color:#64748B;text-transform:uppercase;letter-spacing:.04em}
+-table{border-collapse:collapse;width:100%;font-size:13px;margin:10px 0}th,td{border-bottom:1px solid #E2E8F0;padding:6px 10px;text-align:left}
+-th{background:#F1F5F9}.warn{background:#FFFBEB;border-left:4px solid #F59E0B;padding:8px 12px;margin:6px 0;border-radius:4px}
+-li{margin:4px 0}.foot{color:#64748B;font-size:12px;margin-top:40px}@media print{.chart{break-inside:avoid}}
++body{font-family:'IBM Plex Sans',-apple-system,Segoe UI,Roboto,sans-serif;color:#1F2933;background:#FBFAF7;max-width:1000px;margin:32px auto;padding:0 20px;line-height:1.55}
++h1,h2{font-family:'Source Serif 4',Georgia,serif}h1{font-size:30px;margin-bottom:0}h2{margin-top:36px;border-bottom:1px solid #DAD6CE;padding-bottom:6px;font-size:20px}
++.sub{color:#5F6B76;margin-top:4px}.kpis{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
++.kpi{flex:1;min-width:140px;border:1px solid #DAD6CE;border-radius:4px;padding:14px 16px;background:#fff}
++.kpi b{display:block;font-size:24px;color:#1E5A78}.kpi span{font-size:12px;color:#5F6B76;text-transform:uppercase;letter-spacing:.04em}
++table{border-collapse:collapse;width:100%;font-size:13px;margin:10px 0}th,td{border-bottom:1px solid #DAD6CE;padding:6px 10px;text-align:left}
++th{background:#F3F1EB}.warn{background:#FFFBEB;border-left:3px solid #B7791F;padding:8px 12px;margin:6px 0;border-radius:0 4px 4px 0}
++li{margin:4px 0}.foot{color:#5F6B76;font-size:12px;margin-top:40px}@media print{.chart{break-inside:avoid}}
+ """
+ 
+ 
+diff --git a/core/theme.py b/core/theme.py
+index 54d52e2..485e20f 100644
+--- a/core/theme.py
++++ b/core/theme.py
+@@ -4,24 +4,27 @@ from __future__ import annotations
+ import plotly.graph_objects as go
+ import plotly.io as pio
+ 
+-ACCENT = "#4F46E5"      # indigo
+-GOOD, WARN, BAD = "#10B981", "#F59E0B", "#EF4444"
+-INK, MUTED, LINE = "#0F172A", "#64748B", "#E2E8F0"
+-PALETTE = ["#4F46E5", "#06B6D4", "#10B981", "#F59E0B", "#EC4899", "#8B5CF6", "#64748B", "#EF4444"]
+-DIVERGING = [[0, "#EF4444"], [0.5, "#F8FAFC"], [1, "#4F46E5"]]
+-SEQUENTIAL = [[0, "#EEF2FF"], [1, "#4F46E5"]]
++ACCENT = "#1E5A78"      # petrol blue
++GOOD, WARN, BAD = "#3F7D58", "#B7791F", "#B3412F"
++INK, MUTED, LINE = "#1F2933", "#5F6B76", "#DAD6CE"
++PAPER = "#FBFAF7"
++PALETTE = ["#1E5A78", "#C1692F", "#4F8A67", "#8C6A9E", "#C9A227", "#6B7A86", "#A8402F", "#3A8FA3"]
++DIVERGING = [[0, BAD], [0.5, PAPER], [1, ACCENT]]
++SEQUENTIAL = [[0, "#E4EEF3"], [1, ACCENT]]
++
++_FONT = "IBM Plex Sans, -apple-system, Segoe UI, Roboto, sans-serif"
+ 
+ _template = go.layout.Template()
+ _template.layout = go.Layout(
+-    font=dict(family="Inter, -apple-system, Segoe UI, Roboto, sans-serif", size=13, color=INK),
+-    title=dict(font=dict(size=16, color=INK), x=0.0, xanchor="left"),
++    font=dict(family=_FONT, size=13, color=INK),
++    title=dict(font=dict(size=15, color=INK), x=0.0, xanchor="left"),
+     colorway=PALETTE,
+     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+     margin=dict(l=40, r=20, t=56, b=40),
+-    xaxis=dict(gridcolor=LINE, linecolor=LINE, zeroline=False),
+-    yaxis=dict(gridcolor=LINE, linecolor=LINE, zeroline=False),
++    xaxis=dict(gridcolor="#ECE9E2", linecolor=LINE, zeroline=False, ticks="outside", tickcolor=LINE),
++    yaxis=dict(gridcolor="#ECE9E2", linecolor=LINE, zeroline=False),
+     legend=dict(bgcolor="rgba(0,0,0,0)"),
+-    hoverlabel=dict(font=dict(family="Inter, sans-serif")),
++    hoverlabel=dict(font=dict(family=_FONT), bgcolor="#FFFFFF", bordercolor=LINE),
+ )
+ pio.templates["idap"] = _template
+ pio.templates.default = "idap"
+diff --git a/tests/test_app_smoke.py b/tests/test_app_smoke.py
+index 8519649..4e8ab22 100644
+--- a/tests/test_app_smoke.py
++++ b/tests/test_app_smoke.py
+@@ -7,8 +7,8 @@ pytest.importorskip("streamlit")
+ from streamlit.testing.v1 import AppTest
+ 
+ MAIN = str(Path(__file__).resolve().parents[1] / "app" / "main.py")
+-PAGES = ["📥  Upload", "🩺  Quality report", "🧹  Clean", "🔎  Explore", "🧠  Insights",
+-         "📌  Dashboard", "📦  Export & report", "🕘  History"]
++PAGES = ["Upload", "Quality report", "Clean", "Explore", "Insights",
++         "Dashboard", "Export & report", "History"]
+ 
+ 
+ def _go(at, page):
+@@ -37,14 +37,14 @@ def test_every_page_with_data(app):
+ 
+ 
+ def test_apply_all_suggestions_then_pages(app):
+-    _go(app, "🧹  Clean")
++    _go(app, "Clean")
+     next(b for b in app.button if b.label.startswith("Apply all")).click().run()
+     assert not app.exception
+     assert len(app.session_state.steps) > 3
+     for p in PAGES:
+         _go(app, p)
+     # undo / redo round trip
+-    _go(app, "🧹  Clean")
++    _go(app, "Clean")
+     n = len(app.session_state.steps)
+     next(b for b in app.button if "Undo" in b.label).click().run()
+     assert len(app.session_state.steps) == n - 1
+@@ -53,7 +53,7 @@ def test_apply_all_suggestions_then_pages(app):
+ 
+ 
+ def test_ask_automl_manual_tool_and_report(app):
+-    _go(app, "🧹  Clean")
++    _go(app, "Clean")
+     next(b for b in app.button if b.label.startswith("Apply all")).click().run()
+     # manual tool: filter rows
+     app.selectbox(key="manual_tool").set_value("Filter rows").run()
+@@ -64,7 +64,7 @@ def test_ask_automl_manual_tool_and_report(app):
+     app.button(key="m_add").click().run()
+     assert not app.exception and len(app.session_state.steps) == n + 1
+     # ask your data
+-    _go(app, "🧠  Insights")
++    _go(app, "Insights")
+     app.text_input(key="ask_q").set_value("average sales by region")
+     next(b for b in app.button if b.label == "Ask").click().run()
+     assert not app.exception
+@@ -73,15 +73,15 @@ def test_ask_automl_manual_tool_and_report(app):
+     # pin + dashboard
+     app.button(key="ask_pin").click().run()
+     assert app.session_state.pins
+-    _go(app, "📌  Dashboard")
++    _go(app, "Dashboard")
+     # report
+-    _go(app, "📦  Export & report")
++    _go(app, "Export & report")
+     next(b for b in app.button if "Build report" in b.label).click().run()
+     assert not app.exception and "<html" in app.session_state["report_html"]
+ 
+ 
+ def test_bad_manual_step_shows_error_not_crash(app):
+-    _go(app, "🧹  Clean")
++    _go(app, "Clean")
+     app.selectbox(key="manual_tool").set_value("Filter rows").run()
+     app.selectbox(key="m_flt").set_value("Quantity").run()
+     app.text_input(key="m_flt_v").set_value("not a number").run()

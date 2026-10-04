@@ -3,8 +3,11 @@ maxUploadSize = 100
 
 [theme]
 base = "light"
-primaryColor = "#4F46E5"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F8FAFC"
-textColor = "#0F172A"
+primaryColor = "#1E5A78"
+backgroundColor = "#FBFAF7"
+secondaryBackgroundColor = "#F3F1EB"
+textColor = "#1F2933"
 font = "sans serif"
+baseRadius = "4px"
+borderColor = "#DAD6CE"
+showWidgetBorder = true

@@ -15,15 +15,14 @@ SAMPLE_PATH = Path(__file__).resolve().parents[2] / "data" / "samples" / "messy_
 def render():
     s = st.session_state
     if s.raw_df is None:
-        st.markdown("<div class='hero'><h1>From messy file to clear answers</h1>"
-                    "<p>Upload a spreadsheet, see exactly what is wrong with it, fix it with one click, and ask "
-                    "questions in plain English. Every step is explained and can be replayed on the next file.</p></div>",
-                    unsafe_allow_html=True)
+        ui.intro("From messy file to clear answers",
+                 "Upload a spreadsheet, see exactly what is wrong with it, fix it with one click, and ask "
+                 "questions in plain English. Every step is explained and can be replayed on the next file.")
         c = st.columns(4)
-        with c[0]: ui.card("🩺", "Quality report", "A 0–100 score and a plain-language list of what is wrong.")
-        with c[1]: ui.card("🧹", "Guided cleaning", "One-click fixes with reasons, undo/redo and a replayable log.")
-        with c[2]: ui.card("🧠", "Ask your data", "Type a question. Get an answer, a chart and the code behind it.")
-        with c[3]: ui.card("🤖", "Predict", "Train baseline models and get warned when not to trust them.")
+        with c[0]: ui.card("Quality report", "A 0–100 score and a plain-language list of what is wrong.")
+        with c[1]: ui.card("Guided cleaning", "One-click fixes with reasons, undo/redo and a replayable log.")
+        with c[2]: ui.card("Ask your data", "Type a question. Get an answer, a chart and the code behind it.")
+        with c[3]: ui.card("Predict", "Train baseline models and get warned when not to trust them.")
         st.write("")
     else:
         ui.page_header("Upload", "Load a different file at any time. Your cleaning steps reset for the new dataset.")
@@ -47,16 +46,19 @@ def render():
             if readable and s.last_upload_key != key:
                 try:
                     label = up.name if sheet is None else f"{up.name} [{sheet}]"
-                    state.set_dataset(load_file(data, up.name, sheet=sheet), label)
+                    loaded = load_file(data, up.name, sheet=sheet)
+                    state.set_dataset(loaded, label)
+                    s.load_notice = _skipped_notice(loaded.attrs.get("skipped_lines"))
                     s.last_upload_key = key
-                    st.toast(f"Loaded {label}", icon="✅")
+                    st.toast(f"Loaded {label}")
                 except IngestError as e:
                     st.error(str(e))
     with right:
         st.markdown("**No file handy?**")
-        if st.button("✨ Use the sample messy dataset", width="stretch"):
+        if st.button("Use the sample messy dataset", width="stretch"):
             state.set_dataset(load_file(io.BytesIO(SAMPLE_PATH.read_bytes()), SAMPLE_PATH.name), SAMPLE_PATH.name)
             s.last_upload_key = None
+            s.load_notice = None
             st.rerun()
         st.caption("400 sales rows with typical real-world problems: numbers stored as text, mixed date formats, "
                    "inconsistent spellings, duplicates and outliers.")
@@ -65,6 +67,8 @@ def render():
     df = s.raw_df
     if df is None:
         return
+    if s.get("load_notice"):
+        st.warning(s.load_notice)
     st.divider()
     st.subheader(f"Preview · {s.filename}")
     c = st.columns(4)
@@ -73,7 +77,7 @@ def render():
     with c[2]: ui.kpi("Missing cells", f"{int(df.isna().sum().sum()):,}")
     with c[3]: ui.kpi("Memory", f"{df.memory_usage(deep=True).sum() / 1e6:.1f} MB")
     st.write("")
-    q = st.text_input("🔍 Search the preview", placeholder="Type to filter rows (searches every column)")
+    q = st.text_input("Search the preview", placeholder="Type to filter rows (searches every column)")
     view = df
     if q:
         mask = df.astype(str).apply(lambda col: col.str.contains(q, case=False, regex=False)).any(axis=1)
@@ -84,7 +88,17 @@ def render():
         st.caption("Text columns may secretly be numbers or dates; the Quality Report finds these.")
         st.dataframe(pd.DataFrame({"dtype": df.dtypes.astype(str), "non-empty": df.notna().sum()}),
                      width="stretch")
-    st.success("Next: open **Quality Report** in the sidebar to see what needs fixing.", icon="➡️")
+    st.success("Next: open **Quality report** in the sidebar to see what needs fixing.")
+
+
+def _skipped_notice(lines) -> str | None:
+    if not lines:
+        return None
+    shown = ", ".join(str(n) for n in lines[:8]) + (" ..." if len(lines) > 8 else "")
+    return (f"{len(lines)} row{'s' if len(lines) != 1 else ''} had more fields than the header and "
+            f"{'were' if len(lines) != 1 else 'was'} skipped (file line{'s' if len(lines) != 1 else ''}: {shown}). "
+            "This usually means a text value contains an unquoted comma. Fix those lines in the source file "
+            "if you need every row.")
 
 
 def _recent():
@@ -95,7 +109,7 @@ def _recent():
         if rows:
             st.markdown("**Recent datasets**")
             for d in rows:
-                st.caption(f"📄 {d.name} · {d.n_rows:,} rows · {d.created_at:%d %b %H:%M}")
+                st.caption(f"{d.name} · {d.n_rows:,} rows · {d.created_at:%d %b %H:%M}")
             st.caption("Open the History page to load one.")
     except Exception:
         pass

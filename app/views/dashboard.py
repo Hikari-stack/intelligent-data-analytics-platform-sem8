@@ -7,7 +7,7 @@ from core.theme import style
 
 
 def _filters(df: pd.DataFrame) -> pd.DataFrame:
-    with st.expander("🎚 Dashboard filters", expanded=False):
+    with st.expander("Dashboard filters", expanded=False):
         dts, cats = eda.datetime_cols(df), [c for c in eda.categorical_cols(df) if 2 <= df[c].nunique() <= 30][:3]
         if dts:
             d = dts[0]
@@ -30,8 +30,8 @@ def render():
     s = st.session_state
     df = state.current_df()
     if not s.pins:
-        ui.empty_state("📌", "Nothing pinned yet",
-                       "Use the 📌 button under any chart in Explore, or under an answer in Ask your data.")
+        ui.empty_state("Nothing pinned yet",
+                       "Use the Pin button under any chart in Explore, or under an answer in Ask your data.")
     view = _filters(df)
     st.caption(f"Showing {len(view):,} of {len(df):,} rows")
     nums = eda.numeric_cols(view)[:4]

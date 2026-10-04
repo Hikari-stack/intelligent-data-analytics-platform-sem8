@@ -6,72 +6,84 @@ import html
 import plotly.graph_objects as go
 import streamlit as st
 
-from core.theme import ACCENT, BAD, GOOD, LINE, MUTED, WARN
+from core.theme import ACCENT, BAD, GOOD, INK, LINE, MUTED, WARN
 
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html, body, [class*="css"], .stMarkdown, button, input, textarea { font-family: 'Inter', sans-serif; }
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap');
+:root {
+  --ink:#1F2933; --muted:#5F6B76; --line:#DAD6CE; --paper:#FBFAF7; --panel:#F3F1EB;
+  --accent:#1E5A78; --accent-soft:#E4EEF3;
+  --good:#3F7D58; --warn:#B7791F; --bad:#B3412F;
+}
+html, body, [class*="css"], .stMarkdown, button, input, textarea { font-family: 'IBM Plex Sans', sans-serif; }
 #MainMenu, footer { visibility: hidden; }
-.block-container { padding-top: 3.6rem; padding-bottom: 4rem; max-width: 1280px; }
-h1, h2, h3 { letter-spacing: -0.02em; font-weight: 650; }
+.block-container { padding-top: 3.2rem; padding-bottom: 4rem; max-width: 1200px; }
+h1, h2, h3 { font-family: 'Source Serif 4', Georgia, serif; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
+h2, h3 { font-size: 1.3rem; }
 
 /* sidebar */
-section[data-testid="stSidebar"] { background: #0F172A; }
-section[data-testid="stSidebar"] * { color: #E2E8F0; }
-section[data-testid="stSidebar"] hr { border-color: #1E293B; }
-section[data-testid="stSidebar"] .stRadio label { padding: 6px 10px; border-radius: 8px; width: 100%; }
-section[data-testid="stSidebar"] .stRadio label:hover { background: #1E293B; }
-.brand { display:flex; align-items:center; gap:10px; margin: 4px 0 14px; }
-.brand .logo { width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,#6366F1,#06B6D4);
-  display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff !important; }
-.brand b { font-size: 15px; line-height:1.1; } .brand span { font-size: 11px; color:#94A3B8 !important; }
-.side-card { background:#1E293B; border-radius:12px; padding:12px 14px; margin-top:10px; font-size:13px; }
-.side-card small { color:#94A3B8 !important; }
+section[data-testid="stSidebar"] { background: var(--panel); border-right: 1px solid var(--line); }
+section[data-testid="stSidebar"] hr { border-color: var(--line); }
+section[data-testid="stSidebar"] .stRadio label { padding: 5px 10px; border-radius: 4px; width: 100%; font-size: 14.5px; }
+section[data-testid="stSidebar"] .stRadio label:hover { background: #E8E5DC; }
+.brand { margin: 2px 0 18px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.brand b { font-family: 'Source Serif 4', Georgia, serif; font-size: 18px; font-weight: 600; display:block; line-height:1.2; }
+.brand span { font-size: 12.5px; color: var(--muted); }
+.side-card { border:1px solid var(--line); background: var(--paper); border-radius:4px; padding:10px 12px; margin-top:12px; font-size:13px; line-height:1.5; }
+.side-card small { color: var(--muted); }
 
 /* page header */
-.page-head { margin-bottom: 1.1rem; }
-.page-head h1 { font-size: 1.85rem; margin: 0; }
-.page-head p { color: #64748B; margin: 4px 0 0; font-size: 0.97rem; }
+.page-head { margin-bottom: 1.2rem; }
+.page-head h1 { font-size: 2rem; margin: 0; }
+.page-head p { color: var(--muted); margin: 6px 0 0; font-size: 1rem; max-width: 720px; }
 
 /* stepper */
-.stepper { display:flex; gap:6px; margin: 0 0 1.4rem; flex-wrap: wrap; }
-.step { flex:1; min-width:120px; padding:9px 12px; border-radius:10px; border:1px solid #E2E8F0; background:#fff;
-  font-size:13px; display:flex; align-items:center; gap:8px; color:#64748B; }
-.step i { font-style:normal; width:22px; height:22px; border-radius:50%; background:#F1F5F9; display:flex;
-  align-items:center; justify-content:center; font-size:11px; font-weight:600; flex:none; }
-.step.done { color:#0F172A; } .step.done i { background:#D1FAE5; color:#047857; }
-.step.now { border-color:#4F46E5; box-shadow:0 0 0 3px #EEF2FF; color:#0F172A; font-weight:600; }
-.step.now i { background:#4F46E5; color:#fff; } .step.lock { opacity:.55; }
+.stepper { display:flex; margin: 0 0 1.6rem; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.step { padding: 8px 18px 10px 0; margin-right: 18px; font-size: 13.5px; color: var(--muted);
+  display:flex; align-items:center; gap:7px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.step i { font-style: normal; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.step.done { color: var(--ink); } .step.done i { color: var(--good); }
+.step.now { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+.step.now i { color: var(--accent); }
+.step.lock { opacity: .5; }
 
-/* cards */
-.card { border:1px solid #E2E8F0; border-radius:14px; padding:16px 18px; background:#fff; height:100%;
-  box-shadow: 0 1px 2px rgba(15,23,42,.04); }
-.card h4 { margin:0 0 4px; font-size:15px; } .card p { margin:0; color:#64748B; font-size:13.5px; }
-.card .ic { font-size:22px; margin-bottom:8px; }
-.hero { border-radius:18px; padding:34px 34px 30px; margin-bottom:1.2rem; color:#fff;
-  background: radial-gradient(1200px 400px at 90% -20%, #22D3EE55, transparent), linear-gradient(135deg,#312E81,#4F46E5 55%,#6366F1); }
-.hero h1 { color:#fff; font-size:2.1rem; margin:0 0 8px; } .hero p { color:#E0E7FF; font-size:1.02rem; max-width:680px; margin:0; }
-.chip { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:500; margin:2px 4px 2px 0; }
-.chip.ok { background:#D1FAE5; color:#047857; } .chip.warn { background:#FEF3C7; color:#B45309; }
-.chip.bad { background:#FEE2E2; color:#B91C1C; } .chip.info { background:#E0E7FF; color:#4338CA; }
-.chip.mute { background:#F1F5F9; color:#475569; }
-.kpi { border:1px solid #E2E8F0; border-radius:14px; padding:14px 16px; background:#fff; }
-.kpi span { font-size:12px; color:#64748B; text-transform:uppercase; letter-spacing:.05em; }
-.kpi b { display:block; font-size:1.55rem; margin-top:2px; letter-spacing:-.02em; }
-.kpi small { color:#64748B; }
-.timeline { border-left:2px solid #E2E8F0; margin-left:8px; padding-left:16px; }
-.timeline .t { position:relative; margin:0 0 12px; font-size:14px; }
-.timeline .t::before { content:''; position:absolute; left:-23px; top:5px; width:10px; height:10px; border-radius:50%;
-  background:#4F46E5; box-shadow:0 0 0 3px #EEF2FF; }
-.answer { border-left:4px solid #4F46E5; background:#F8FAFC; padding:14px 18px; border-radius:0 12px 12px 0; font-size:1.02rem; }
-div[data-testid="stMetric"] { background:#fff; border:1px solid #E2E8F0; border-radius:14px; padding:12px 16px; }
-.stButton > button, .stDownloadButton > button { border-radius:10px; font-weight:500; }
+/* cards and panels */
+.card { border-top: 2px solid var(--ink); padding: 12px 2px 4px; height:100%; }
+.card h4 { margin:0 0 4px; font-size:15.5px; font-weight:600; font-family:'IBM Plex Sans',sans-serif; }
+.card p { margin:0; color: var(--muted); font-size:14px; line-height:1.5; }
+.card.empty { border:1px dashed var(--line); border-radius:4px; text-align:center; padding:40px 20px; }
+.card.empty h4 { font-family:'Source Serif 4', Georgia, serif; font-size:18px; }
+.intro { padding: 4px 0 22px; margin-bottom: 1.4rem; border-bottom: 1px solid var(--line); }
+.intro h1 { font-size: 2.3rem; margin: 0 0 10px; line-height: 1.15; }
+.intro p { color: var(--muted); font-size: 1.05rem; max-width: 660px; margin: 0; line-height: 1.55; }
+.chip { display:inline-block; padding:1px 8px; border-radius:3px; font-size:12px; font-weight:500; margin:2px 4px 2px 0; border:1px solid transparent; }
+.chip.ok { background:#E6F0EA; color:#2F6244; } .chip.warn { background:#F8EEDB; color:#8A5A12; }
+.chip.bad { background:#F5E3DF; color:#8E2F20; } .chip.info { background: var(--accent-soft); color: var(--accent); }
+.chip.mute { background:#EDEAE2; color:#4A545E; }
+.kpi { border:1px solid var(--line); border-radius:4px; padding:12px 14px; background:#fff; min-height:98px; margin-bottom:14px; }
+.score { border:1px solid var(--line); border-radius:4px; background:#fff; padding:16px 20px; min-height:98px; margin-bottom:14px; }
+.score span { font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+.score b { display:block; font-family:'Source Serif 4',Georgia,serif; font-size:2.6rem; line-height:1.1; margin:2px 0 10px; font-variant-numeric:tabular-nums; }
+.score b small { font-size:1rem; color:var(--muted); font-family:'IBM Plex Sans',sans-serif; font-weight:400; }
+.score .bar { height:6px; background:#ECE9E2; border-radius:3px; overflow:hidden; }
+.score .bar div { height:100%; }
+.score em { display:block; font-style:normal; font-size:13px; color:var(--muted); margin-top:8px; }
+.kpi span { font-size:11.5px; color: var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+.kpi b { display:block; font-size:1.5rem; margin-top:2px; font-weight:600; font-variant-numeric: tabular-nums; }
+.kpi small { color: var(--muted); }
+.timeline { border-left:1px solid var(--line); margin-left:6px; padding-left:16px; }
+.timeline .t { position:relative; margin:0 0 10px; font-size:14px; }
+.timeline .t::before { content:''; position:absolute; left:-21px; top:7px; width:7px; height:7px; border-radius:50%; background: var(--accent); }
+.answer { border-left:3px solid var(--accent); background: var(--panel); padding:12px 16px; border-radius:0 4px 4px 0; font-size:1.02rem; }
+div[data-testid="stMetric"] { background:#fff; border:1px solid var(--line); border-radius:4px; padding:10px 14px; }
+.stButton > button, .stDownloadButton > button { border-radius:4px; font-weight:500; }
+div[data-testid="stAlert"] { border-radius:4px; }
 div[data-testid="stTabs"] button { font-weight:500; }
 </style>
 """
 
-STEPS = [("Upload", "📥"), ("Quality", "🩺"), ("Clean", "🧹"), ("Explore", "🔎"), ("Insights", "🧠"), ("Export", "📦")]
+STEPS = ["Upload", "Quality", "Clean", "Explore", "Insights", "Export"]
 
 
 def inject_css():
@@ -79,8 +91,8 @@ def inject_css():
 
 
 def sidebar_brand():
-    st.sidebar.markdown("<div class='brand'><div class='logo'>IA</div><div><b>Intelligent Analytics</b><br>"
-                        "<span>Guided &amp; explainable</span></div></div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div class='brand'><b>Intelligent Data Analytics</b>"
+                        "<span>Check, clean and explain your data</span></div>", unsafe_allow_html=True)
 
 
 def sidebar_dataset(name: str | None, rows: int | None, cols: int | None, steps: int, score: float | None):
@@ -99,18 +111,24 @@ def page_header(title: str, subtitle: str = ""):
                 f"{f'<p>{html.escape(subtitle)}</p>' if subtitle else ''}</div>", unsafe_allow_html=True)
 
 
+def intro(title: str, text: str):
+    st.markdown(f"<div class='intro'><h1>{html.escape(title)}</h1><p>{html.escape(text)}</p></div>",
+                unsafe_allow_html=True)
+
+
 def stepper(current: int, has_data: bool, cleaned: bool):
     out = []
-    for i, (label, icon) in enumerate(STEPS):
+    for i, label in enumerate(STEPS):
         done = (i == 0 and has_data) or (i == 2 and cleaned) or (has_data and i < current and i != 2)
         cls = "now" if i == current else "done" if done else ("lock" if not has_data and i > 0 else "")
-        out.append(f"<div class='step {cls}'><i>{'✓' if done and i != current else i + 1}</i>{icon} {label}</div>")
+        mark = "✓" if done and i != current else f"{i + 1}."
+        out.append(f"<div class='step {cls}'><i>{mark}</i>{label}</div>")
     st.markdown(f"<div class='stepper'>{''.join(out)}</div>", unsafe_allow_html=True)
 
 
-def card(icon: str, title: str, text: str):
-    st.markdown(f"<div class='card'><div class='ic'>{icon}</div><h4>{html.escape(title)}</h4>"
-                f"<p>{html.escape(text)}</p></div>", unsafe_allow_html=True)
+def card(title: str, text: str):
+    st.markdown(f"<div class='card'><h4>{html.escape(title)}</h4><p>{html.escape(text)}</p></div>",
+                unsafe_allow_html=True)
 
 
 def kpi(label: str, value, sub: str = ""):
@@ -126,14 +144,28 @@ def chips(items: list[tuple[str, str]]):
     st.markdown("".join(chip(t, k) for t, k in items), unsafe_allow_html=True)
 
 
+def score_block(score: float, title: str = "Quality score"):
+    """Plain score readout with a thin progress bar and a one-line verdict."""
+    color = GOOD if score >= 80 else WARN if score >= 55 else BAD
+    verdict = "Good shape" if score >= 80 else "Usable, but needs cleaning" if score >= 55 else "Needs significant cleaning"
+    st.markdown(f"<div class='score'><span>{html.escape(title)}</span>"
+                f"<b style='color:{color}'>{score:g}<small> / 100</small></b>"
+                f"<div class='bar'><div style='width:{max(0, min(100, score))}%;background:{color}'></div></div>"
+                f"<em>{verdict}</em></div>", unsafe_allow_html=True)
+
+
 def gauge(score: float, title: str = "Quality score", height: int = 210):
+    """Horizontal bullet gauge: easier to read than a dial and closer to a report figure."""
     color = GOOD if score >= 80 else WARN if score >= 55 else BAD
     fig = go.Figure(go.Indicator(
-        mode="gauge+number", value=score, number={"suffix": "/100", "font": {"size": 32, "color": "#0F172A"}},
+        mode="number+gauge", value=score, number={"suffix": " / 100", "font": {"size": 34, "color": INK}},
         title={"text": title, "font": {"size": 14, "color": MUTED}},
-        gauge={"axis": {"range": [0, 100], "tickwidth": 0, "showticklabels": False},
-               "bar": {"color": color, "thickness": 0.28}, "bgcolor": "#F1F5F9", "borderwidth": 0}))
-    fig.update_layout(height=height, margin=dict(l=30, r=30, t=50, b=10), paper_bgcolor="rgba(0,0,0,0)")
+        gauge={"shape": "bullet", "axis": {"range": [0, 100], "tickvals": [0, 55, 80, 100],
+                                           "tickfont": {"size": 11, "color": MUTED}},
+               "bar": {"color": color, "thickness": 0.45}, "bgcolor": "#fff", "borderwidth": 0,
+               "steps": [{"range": [0, 55], "color": "#F1E1DC"}, {"range": [55, 80], "color": "#F3EAD3"},
+                         {"range": [80, 100], "color": "#E2EDE5"}]}))
+    fig.update_layout(height=min(height, 170), margin=dict(l=20, r=30, t=50, b=30), paper_bgcolor="rgba(0,0,0,0)")
     return fig
 
 
@@ -151,6 +183,6 @@ def answer_box(md_text: str):
     st.markdown(f"<div class='answer'>{safe}</div>", unsafe_allow_html=True)
 
 
-def empty_state(icon: str, title: str, text: str):
-    st.markdown(f"<div class='card' style='text-align:center;padding:42px'><div style='font-size:40px'>{icon}</div>"
-                f"<h4 style='margin-top:6px'>{html.escape(title)}</h4><p>{html.escape(text)}</p></div>", unsafe_allow_html=True)
+def empty_state(title: str, text: str):
+    st.markdown(f"<div class='card empty'><h4>{html.escape(title)}</h4><p>{html.escape(text)}</p></div>",
+                unsafe_allow_html=True)

@@ -157,7 +157,7 @@ def chart_for(df: pd.DataFrame, x: str, y: str | None = None):
             m, b = np.polyfit(d[x], d[y], 1)
             xs = np.array([d[x].min(), d[x].max()])
             fig.add_trace(go.Scatter(x=xs, y=m * xs + b, mode="lines", name="trend",
-                                     line=dict(color="#EF4444")))
+                                     line=dict(color="#B3412F")))
         return fig
     if x in dt and y in num:
         d = df[[x, y]].dropna().sort_values(x)
@@ -201,7 +201,7 @@ def missing_matrix(df: pd.DataFrame, max_rows: int = 300):
     sample = df.sample(min(len(df), max_rows), random_state=0) if len(df) > max_rows else df
     fig = px.imshow(sample.isna().astype(int).values, aspect="auto",
                     labels=dict(x="column", y="row", color="missing"),
-                    x=list(sample.columns), color_continuous_scale=["#EEF2FF", "#EF4444"],
+                    x=list(sample.columns), color_continuous_scale=["#F3E4DF", "#B3412F"],
                     title="Missing values (dark = missing)")
     fig.update_coloraxes(showscale=False)
     return fig

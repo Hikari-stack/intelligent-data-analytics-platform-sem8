@@ -26,15 +26,14 @@ def render_profile(df: pd.DataFrame, title: str, skey: str, compact: bool = Fals
     ov = prof["overview"]
     if title:
         st.subheader(title)
-    g, k = st.columns([1, 2], gap="large") if not compact else (st.container(), st.container())
+    g, k = st.columns([1, 2], gap="medium") if not compact else (st.container(), st.container())
     with g:
-        st.plotly_chart(ui.gauge(ov["quality_score"], height=190 if compact else 230), width="stretch",
-                        key=f"gauge_{title}_{skey[:20]}")
+        ui.score_block(ov["quality_score"])
     with k:
         c = st.columns(2 if compact else 4)
         items = [("Rows", f"{ov['rows']:,}", ""), ("Duplicate rows", ov["duplicate_rows"], ""),
                  ("Missing cells", f"{ov['missing_cells']:,}", f"{ov['missing_pct']}% of all cells"),
-                 ("Columns with issues", ov["flagged_columns"], f"of {ov['columns']}")]
+                 ("Flagged columns", ov["flagged_columns"], f"of {ov['columns']}")]
         for idx, (a, b, sub) in enumerate(items):
             with c[idx % len(c)]:
                 ui.kpi(a, b, sub)
@@ -43,7 +42,7 @@ def render_profile(df: pd.DataFrame, title: str, skey: str, compact: bool = Fals
     for name, i in prof["columns"].items():
         iss = issues_for(i)
         rows.append({"column": name, "type": KIND_LABEL.get(i["kind"], i["kind"]), "missing %": i["missing_pct"],
-                     "unique": i["unique"], "issues": " · ".join(t for t, _ in iss) or "✓ none"})
+                     "unique": i["unique"], "issues": " · ".join(t for t, _ in iss) or "none"})
     st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch",
                  column_config={"missing %": st.column_config.ProgressColumn("missing %", min_value=0, max_value=100,
                                                                               format="%.1f%%"),
@@ -67,4 +66,4 @@ def render():
         a, b = st.columns([1, 3])
         a.markdown(f"**{name}**")
         b.markdown("".join(ui.chip(t, k) for t, k in iss), unsafe_allow_html=True)
-    st.info("Go to **Clean** to review one-click fixes for these problems.", icon="🧹")
+    st.info("Go to **Clean** to review one-click fixes for these problems.")

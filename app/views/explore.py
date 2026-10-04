@@ -15,7 +15,7 @@ def render():
     df, s = state.current_df(), st.session_state
     ui.chips([(f"Using cleaned data · {len(s.steps)} steps" if s.steps else "Using the original data · clean it first for better results",
                "ok" if s.steps else "warn")])
-    t1, t2, t3, t4, t5 = st.tabs(["📋 Overview", "🔬 Column drill-down", "🔗 Correlations", "📊 Chart builder", "🗂 Data table"])
+    t1, t2, t3, t4, t5 = st.tabs(["Overview", "Column drill-down", "Correlations", "Chart builder", "Data table"])
     with t1:
         _overview(df)
     with t2:
@@ -46,7 +46,7 @@ def _overview(df):
     for line in insights or ["No notable patterns found."]:
         st.markdown(f"- {line}")
     for w in warnings:
-        st.warning(w, icon="⚠️")
+        st.warning(w)
     a, b = st.columns(2)
     with a:
         st.subheader("Numeric summary")
@@ -79,7 +79,7 @@ def _drilldown(df):
     fig = eda.chart_for(df, col)
     if fig is not None:
         st.plotly_chart(style(fig, 360), width="stretch")
-        st.button("📌 Pin to dashboard", key="dd_pin", on_click=state.pin, args=({"kind": "chart", "x": col, "y": None},))
+        st.button("Pin to dashboard", key="dd_pin", on_click=state.pin, args=({"kind": "chart", "x": col, "y": None},))
     if not pd.api.types.is_numeric_dtype(s):
         st.dataframe(s.value_counts(dropna=False).head(30).rename("rows").reset_index(), hide_index=True,
                      width="stretch")
@@ -96,7 +96,7 @@ def _builder(df):
         st.info("No suitable chart for that combination. Try a different pair.")
         return
     st.plotly_chart(style(fig, 440), width="stretch")
-    st.button("📌 Pin to dashboard", key="cb_pin", on_click=state.pin, args=({"kind": "chart", "x": x, "y": yy},))
+    st.button("Pin to dashboard", key="cb_pin", on_click=state.pin, args=({"kind": "chart", "x": x, "y": yy},))
 
 
 def _table(df):

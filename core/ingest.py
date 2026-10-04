@@ -21,12 +21,37 @@ def _detect_sep(sample: str) -> str:
         return ","
 
 
+def _bad_line_numbers(raw: bytes, enc: str, sep: str) -> list[int]:
+    """Line numbers of rows that have more fields than the header (e.g. an unquoted comma in a text value)."""
+    reader = csv.reader(io.StringIO(raw.decode(enc, errors="replace"), newline=""), delimiter=sep)
+    try:
+        width = len(next(reader))
+    except StopIteration:
+        return []
+    bad = []
+    try:
+        for row in reader:
+            if len(row) > width:
+                bad.append(reader.line_num)
+    except csv.Error:
+        pass
+    return bad
+
+
 def _read_text(raw: bytes) -> pd.DataFrame:
     last_err: Exception | None = None
     for enc in ("utf-8-sig", "latin-1"):
         try:
             sep = _detect_sep(raw[:20000].decode(enc, errors="ignore"))
-            return pd.read_csv(io.BytesIO(raw), sep=sep, encoding=enc)
+            try:
+                return pd.read_csv(io.BytesIO(raw), sep=sep, encoding=enc)
+            except pd.errors.ParserError:
+                # Some rows have more fields than the header. Load everything else and report what was skipped,
+                # instead of refusing the whole file.
+                skipped = _bad_line_numbers(raw, enc, sep)
+                df = pd.read_csv(io.BytesIO(raw), sep=sep, encoding=enc, engine="python", on_bad_lines="skip")
+                df.attrs["skipped_lines"] = skipped
+                return df
         except UnicodeDecodeError as e:
             last_err = e
     raise IngestError(f"Could not decode the file: {last_err}")

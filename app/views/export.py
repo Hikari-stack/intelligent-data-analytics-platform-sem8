@@ -59,7 +59,7 @@ def render():
     st.caption("A single HTML file with the quality scores, cleaning log, insights, cautions and charts. "
                "Open it in a browser or print it to PDF. Charts load their library from the internet.")
     inc = st.checkbox("Include the latest predictive model summary", value=s.automl is not None, disabled=s.automl is None)
-    if st.button("📄 Build report", type="primary"):
+    if st.button("Build report", type="primary"):
         with st.spinner("Building report..."):
             extra = []
             html_doc = report.build_html(df, raw, steps, prof_before, prof_after, s.filename or "dataset", extra,
@@ -72,7 +72,7 @@ def render():
     st.subheader("Save to history")
     name = st.text_input("Pipeline name", value="My cleaning pipeline")
     note = st.text_input("Tag or note (optional)", placeholder="e.g. Q3 sales, monthly refresh")
-    if st.button("💾 Save dataset and pipeline", disabled=not steps):
+    if st.button("Save dataset and pipeline", disabled=not steps):
         try:
             state.db_ready()
             title = (name.strip() or "Untitled") + (f" [{note.strip()}]" if note.strip() else "")
@@ -80,6 +80,6 @@ def render():
                 if s.dataset_id is None:
                     s.dataset_id = save_dataset(db, s.filename, raw)
                 save_pipeline(db, s.dataset_id, title, steps)
-            st.toast("Saved to History", icon="✅")
+            st.toast("Saved to History")
         except Exception as e:
             st.error(f"Could not save to the database: {e}")
