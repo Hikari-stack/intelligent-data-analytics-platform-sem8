@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+data/uploads/
+data/models/
+data/reports/
+idap.db
+*.zip
