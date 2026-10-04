@@ -27,6 +27,8 @@ def render():
     else:
         ui.page_header("Upload", "Load a different file at any time. Your cleaning steps reset for the new dataset.")
 
+    st.toggle("Clean the data automatically after loading", value=True, key="auto_clean",
+              help="Applies the safe suggested fixes straight away. Every step is listed on the Clean page and can be undone.")
     left, right = st.columns([3, 2], gap="large")
     with left:
         up = st.file_uploader("Drop a CSV, TSV, TXT or Excel file (max 100 MB)",
@@ -48,9 +50,10 @@ def render():
                     label = up.name if sheet is None else f"{up.name} [{sheet}]"
                     loaded = load_file(data, up.name, sheet=sheet)
                     state.set_dataset(loaded, label)
-                    s.load_notice = _skipped_notice(loaded.attrs.get("skipped_lines"))
+                    s.load_notice = _load_notice(loaded.attrs)
+                    s.clean_notice = _auto_clean_notice() if s.auto_clean else None
                     s.last_upload_key = key
-                    st.toast(f"Loaded {label}")
+                    st.rerun()  # so the sidebar and stepper pick up the new dataset straight away
                 except IngestError as e:
                     st.error(str(e))
     with right:
@@ -59,18 +62,23 @@ def render():
             state.set_dataset(load_file(io.BytesIO(SAMPLE_PATH.read_bytes()), SAMPLE_PATH.name), SAMPLE_PATH.name)
             s.last_upload_key = None
             s.load_notice = None
+            s.clean_notice = _auto_clean_notice() if s.auto_clean else None
             st.rerun()
         st.caption("400 sales rows with typical real-world problems: numbers stored as text, mixed date formats, "
                    "inconsistent spellings, duplicates and outliers.")
         _recent()
 
-    df = s.raw_df
-    if df is None:
+    if s.raw_df is None:
         return
+    df = state.current_df()
     if s.get("load_notice"):
-        st.warning(s.load_notice)
+        st.info(s.load_notice)
+    if s.get("clean_notice"):
+        st.success(s.clean_notice)
+    elif not s.steps:
+        st.button("Clean the data automatically", on_click=_run_auto_clean, type="primary")
     st.divider()
-    st.subheader(f"Preview · {s.filename}")
+    st.subheader(f"Preview · {s.filename}" + (" (cleaned)" if s.steps else ""))
     c = st.columns(4)
     with c[0]: ui.kpi("Rows", f"{len(df):,}")
     with c[1]: ui.kpi("Columns", df.shape[1])
@@ -91,14 +99,38 @@ def render():
     st.success("Next: open **Quality report** in the sidebar to see what needs fixing.")
 
 
-def _skipped_notice(lines) -> str | None:
-    if not lines:
-        return None
-    shown = ", ".join(str(n) for n in lines[:8]) + (" ..." if len(lines) > 8 else "")
-    return (f"{len(lines)} row{'s' if len(lines) != 1 else ''} had more fields than the header and "
-            f"{'were' if len(lines) != 1 else 'was'} skipped (file line{'s' if len(lines) != 1 else ''}: {shown}). "
-            "This usually means a text value contains an unquoted comma. Fix those lines in the source file "
-            "if you need every row.")
+def _auto_clean_notice() -> str | None:
+    r = state.auto_clean()
+    if not r["steps"]:
+        return "The data already looked clean, so no changes were needed."
+    msg = (f"Cleaned automatically: {r['steps']} step{'s' if r['steps'] != 1 else ''} applied, "
+           f"quality score {r['before']:g} to {r['after']:g}. Every step is listed on the Clean page and can be undone.")
+    if r["left_alone"]:
+        msg += " Left unfilled because filling them would invent data: " + ", ".join(r["left_alone"]) + "."
+    if r["outlier_cols"]:
+        msg += " Unusual values were not changed; review them on the Clean page (Outliers tab)."
+    return msg
+
+
+def _run_auto_clean():
+    st.session_state.clean_notice = _auto_clean_notice()
+
+
+def _load_notice(attrs) -> str | None:
+    """Plain-language note about rows that were repaired or skipped while reading the file."""
+    parts = []
+    rep = attrs.get("repaired_lines")
+    if rep:
+        shown = ", ".join(f"line {ln} (merged into '{col}')" for ln, col in rep[:6]) + (" ..." if len(rep) > 6 else "")
+        parts.append(f"{len(rep)} row{'s' if len(rep) != 1 else ''} contained extra commas and "
+                     f"{'were' if len(rep) != 1 else 'was'} repaired automatically: {shown}. "
+                     "You can check them in the data table below.")
+    lines = attrs.get("skipped_lines")
+    if lines:
+        shown = ", ".join(str(n) for n in lines[:8]) + (" ..." if len(lines) > 8 else "")
+        parts.append(f"{len(lines)} row{'s' if len(lines) != 1 else ''} had more fields than the header and could not "
+                     f"be repaired, so {'they were' if len(lines) != 1 else 'it was'} skipped (file lines: {shown}).")
+    return " ".join(parts) or None
 
 
 def _recent():

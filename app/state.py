@@ -9,7 +9,7 @@ import streamlit as st
 
 from core import eda
 from core.clean import apply_step, replay
-from core.profile import describe_step, profile
+from core.profile import describe_step, profile, suggest_fixes
 from db.models import init_db
 
 
@@ -88,6 +88,51 @@ def cb_apply_all(steps: list):
         cb_apply(s)
         if st.session_state.error:
             break
+
+
+AUTO_SKIP_OPS = {"cap_outliers"}  # changes real values, so it stays a human decision
+
+
+def auto_clean(max_passes: int = 6) -> dict:
+    """Apply every safe suggested fix, repeating until nothing new shows up.
+
+    Structural fixes (types, spellings, placeholders, dates) go first and gaps are filled afterwards. Outliers are
+    left alone, and most-common-value filling is skipped for identity-like columns (names, emails, phone numbers),
+    because that would invent data. Every step is recorded, so Undo and Reset still work."""
+    s = st.session_state
+    n0 = len(s.steps)
+    before = current_profile()["overview"]["quality_score"]
+    failed, left_alone = [], []
+    for _ in range(max_passes):
+        prof = current_profile()
+        rows = max(prof["overview"]["rows"], 1)
+        batch = []
+        for sg in suggest_fixes(prof):
+            if sg in failed or sg["op"] in AUTO_SKIP_OPS:
+                continue
+            if sg["op"] == "impute" and sg.get("method") == "mode" and prof["columns"][sg["col"]]["unique"] / rows > 0.5:
+                if sg["col"] not in left_alone:
+                    left_alone.append(sg["col"])
+                continue
+            batch.append(sg)
+        batch = [b for b in batch if b["op"] != "impute"] or batch  # structure first, gap-filling last
+        if not batch:
+            break
+        progressed = False
+        for step in batch:
+            n = len(s.steps)
+            cb_apply(step)
+            if len(s.steps) > n:
+                progressed = True
+            else:
+                failed.append(step)
+        if not progressed:
+            break
+    s.error = None
+    after = current_profile()["overview"]
+    left = [c for c, i in current_profile()["columns"].items() if i["outlier_pct"] > 1]
+    return {"steps": len(s.steps) - n0, "before": before, "after": after["quality_score"],
+            "left_alone": left_alone, "outlier_cols": left}
 
 
 def cb_undo():

@@ -54,6 +54,10 @@ def render():
     ui.page_header("Quality report", "How healthy is the data? Every problem found is explained in plain language.")
     if not state.require_data():
         return
+    if st.session_state.steps:
+        after = state.current_profile()["overview"]["quality_score"]
+        st.info(f"This report describes the file as you uploaded it. After {len(st.session_state.steps)} cleaning steps "
+                f"the score is {after:g}/100. Compare before and after on the Clean page.")
     prof = render_profile(st.session_state.raw_df, "", state.steps_key([]))
     st.subheader("What needs attention")
     flagged = [(n, issues_for(i)) for n, i in prof["columns"].items() if issues_for(i)]
