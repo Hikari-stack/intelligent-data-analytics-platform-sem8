@@ -8,3 +8,5 @@ data/models/
 data/reports/
 idap.db
 *.zip
+
+venv/
