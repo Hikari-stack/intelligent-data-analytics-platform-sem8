@@ -123,3 +123,21 @@ def test_auto_clean_does_not_invent_identity_values():
     cols = {s.get("col") for s in st.session_state.steps if s["op"] == "impute"}
     assert "email" not in cols and "email" in result["left_alone"]
     assert "city" in cols or any(s["op"] == "standardize_categories" for s in st.session_state.steps)
+
+
+def test_auto_clean_reports_failed_steps(monkeypatch):
+    import pandas as pd
+    import streamlit as st
+    from app import state
+
+    AppTest.from_function(lambda: None).run()
+    st.session_state.clear()
+    state.init_state()
+    state.set_dataset(pd.DataFrame({"a": [1, 2, 3, 4, 5]}), "t.csv")
+
+    monkeypatch.setattr(state, "suggest_fixes", lambda _prof: [{"op": "impute", "col": "a", "method": "unknown"}])
+    result = state.auto_clean(max_passes=2)
+    assert result["steps"] == 0
+    assert result["failed"]
+    assert "Unknown impute method" in result["failed"][0]["error"]
+    assert "Unknown impute method" in st.session_state.error

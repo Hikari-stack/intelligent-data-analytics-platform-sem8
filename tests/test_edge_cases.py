@@ -40,6 +40,14 @@ def test_one_row_file():
     full_pipeline(df)
 
 
+def test_profile_empty_and_all_null_dataframes():
+    empty = profile(pd.DataFrame())
+    assert empty["overview"]["rows"] == 0 and empty["overview"]["columns"] == 0
+    all_null = profile(pd.DataFrame({"a": [None, None], "b": [np.nan, np.nan]}))
+    assert all_null["columns"]["a"]["missing"] == 2
+    assert all_null["columns"]["b"]["missing"] == 2
+
+
 def test_single_column_file():
     df = load_file(io.BytesIO(b"score\n1\n2\n3\n4\n"), "a.csv")
     assert list(df.columns) == ["score"]

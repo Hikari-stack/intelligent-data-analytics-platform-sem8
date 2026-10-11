@@ -159,7 +159,19 @@ def test_automl_guards():
     with pytest.raises(ValueError):
         automl.run(pd.DataFrame({"a": range(50)}), "zzz")
     assert automl.detect_task(pd.Series([0, 1, 0, 1] * 5)) == "classification"
+    assert automl.detect_task(pd.Series([0, 1, 2, 3] * 20)) == "regression"
     assert automl.detect_task(pd.Series(np.linspace(0, 1, 50))) == "regression"
+
+
+def test_automl_warns_for_ambiguous_numeric_target():
+    rng = np.random.default_rng(42)
+    n = 120
+    x = rng.normal(size=n)
+    y = pd.Series(rng.integers(0, 6, n), name="count_target")
+    df = pd.DataFrame({"x": x, "x2": x * 2 + rng.normal(scale=0.1, size=n), "count_target": y})
+    r = automl.run(df, "count_target")
+    assert r.task == "regression"
+    assert any("either regression or classification" in w for w in r.warnings)
 
 
 # ------------------------------------------------------------------ report

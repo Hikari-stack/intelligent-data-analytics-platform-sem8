@@ -31,7 +31,7 @@ class AutoMLResult:
 def detect_task(s: pd.Series) -> str:
     if pd.api.types.is_bool_dtype(s) or not pd.api.types.is_numeric_dtype(s):
         return "classification"
-    if s.nunique(dropna=True) <= 8 and (s.dropna() % 1 == 0).all():
+    if s.nunique(dropna=True) <= 2:
         return "classification"
     return "regression"
 
@@ -123,6 +123,13 @@ def run(df: pd.DataFrame, target: str, seed: int = 0) -> AutoMLResult:
         warnings.append(f"Used a random sample of {MAX_ROWS:,} rows to keep this fast.")
 
     task = detect_task(data[target])
+    if task == "regression":
+        yn = data[target].dropna()
+        if yn.nunique() <= 8 and (yn % 1 == 0).all() and yn.nunique() > 2:
+            warnings.append(
+                f"'{target}' is numeric with only {yn.nunique()} distinct whole-number values. "
+                "This can be modelled as either regression or classification; review both depending on your use case."
+            )
     y = data[target]
     X, notes = _prepare_features(data, target)
     warnings += notes
@@ -216,8 +223,8 @@ def run(df: pd.DataFrame, target: str, seed: int = 0) -> AutoMLResult:
     else:
         mae = board.loc[board.model == best, "test MAE"].iloc[0]
         r2 = board.loc[board.model == best, "test R²"].iloc[0]
-        summary.append(f"Predicting **{target}** (a number). Best model: **{best}**. It explains "
-                       f"{max(r2, 0):.0%} of the variation and is off by {mae:,.2f} on average.")
+        summary.append(f"Predicting **{target}** (a number). Best model: **{best}**. "
+                       f"It has an R² score of {r2:.2f} and an average error of {mae:,.2f}.")
     worse_acc = False
     if task == "classification":
         acc = board.set_index("model")["test accuracy"]

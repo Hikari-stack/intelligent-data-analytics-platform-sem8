@@ -102,13 +102,19 @@ def auto_clean(max_passes: int = 6) -> dict:
     s = st.session_state
     n0 = len(s.steps)
     before = current_profile()["overview"]["quality_score"]
+    failed_keys = set()
+    last_error = None
+
+    def _step_key(step: dict) -> str:
+        return json.dumps({k: v for k, v in step.items() if k != "reason"}, sort_keys=True, default=str)
+
     failed, left_alone = [], []
     for _ in range(max_passes):
         prof = current_profile()
         rows = max(prof["overview"]["rows"], 1)
         batch = []
         for sg in suggest_fixes(prof):
-            if sg in failed or sg["op"] in AUTO_SKIP_OPS:
+            if _step_key(sg) in failed_keys or sg["op"] in AUTO_SKIP_OPS:
                 continue
             if sg["op"] == "impute" and sg.get("method") == "mode" and prof["columns"][sg["col"]]["unique"] / rows > 0.5:
                 if sg["col"] not in left_alone:
@@ -125,14 +131,18 @@ def auto_clean(max_passes: int = 6) -> dict:
             if len(s.steps) > n:
                 progressed = True
             else:
-                failed.append(step)
+                err = s.error or f"Could not apply '{describe_step(step)}'."
+                failed.append({"step": step, "error": err})
+                failed_keys.add(_step_key(step))
+                last_error = err
+                s.error = None
         if not progressed:
             break
-    s.error = None
+    s.error = last_error
     after = current_profile()["overview"]
     left = [c for c, i in current_profile()["columns"].items() if i["outlier_pct"] > 1]
     return {"steps": len(s.steps) - n0, "before": before, "after": after["quality_score"],
-            "left_alone": left_alone, "outlier_cols": left}
+            "left_alone": left_alone, "outlier_cols": left, "failed": failed}
 
 
 def cb_undo():
