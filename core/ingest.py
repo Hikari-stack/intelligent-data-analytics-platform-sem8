@@ -125,11 +125,17 @@ def _read_text(raw: bytes) -> pd.DataFrame:
                     df, repaired = fixed
                     df.attrs["repaired_lines"] = repaired
                     return df
-                # Not safely repairable: load everything else and report what was skipped.
+                # Not safely repairable: fail loudly with the problematic file lines.
                 skipped = _bad_line_numbers(raw, enc, sep)
-                df = pd.read_csv(io.BytesIO(raw), sep=sep, encoding=enc, engine="python", on_bad_lines="skip")
-                df.attrs["skipped_lines"] = skipped
-                return df
+                if skipped:
+                    shown = ", ".join(str(n) for n in skipped[:20])
+                    extra = " ..." if len(skipped) > 20 else ""
+                    raise IngestError(
+                        "Could not safely parse the file. "
+                        "Rows with extra fields were found at file lines: "
+                        f"{shown}{extra}."
+                    )
+                raise IngestError("Could not safely parse the file because it contains malformed CSV rows.")
         except UnicodeDecodeError as e:
             last_err = e
     raise IngestError(f"Could not decode the file: {last_err}")
