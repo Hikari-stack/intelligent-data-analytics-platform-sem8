@@ -35,6 +35,12 @@ def test_load_rejects_empty_and_bad_type():
         load_file(io.BytesIO(b"abc"), "x.pdf")
 
 
+def test_load_rejects_non_repairable_malformed_csv():
+    bad = b"id,name\n1,Ann\n2,Bob,Delhi,India,Extra\n3,Cy\n"
+    with pytest.raises(IngestError, match="Could not safely parse the file"):
+        load_file(io.BytesIO(bad), "x.csv")
+
+
 # ---------- profile ----------
 def test_profile_detects_issues():
     p = profile(messy())
@@ -95,6 +101,18 @@ def test_unknown_op_and_missing_column():
         apply_step(messy(), {"op": "explode"})
     with pytest.raises(ValueError):
         apply_step(messy(), {"op": "impute", "col": "Nope", "method": "mean"})
+    with pytest.raises(ValueError, match="not found"):
+        apply_step(messy(), {"op": "drop_column", "col": "Nope"})
+
+
+def test_replay_fails_when_step_references_removed_column():
+    df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+    steps = [
+        {"op": "drop_column", "col": "a"},
+        {"op": "impute", "col": "a", "method": "mean"},
+    ]
+    with pytest.raises(ValueError, match="not found"):
+        replay(df, steps)
 
 
 # ---------- the key promise: replay ----------

@@ -132,7 +132,8 @@ def apply_step(df: pd.DataFrame, step: dict) -> pd.DataFrame:
         return out
 
     if op == "drop_column":
-        return out.drop(columns=[step["col"]], errors="ignore")
+        col = _require_col(out, step.get("col"))
+        return out.drop(columns=[col])
 
     if op == "drop_rows_missing":
         threshold = float(step.get("threshold", 0.5))

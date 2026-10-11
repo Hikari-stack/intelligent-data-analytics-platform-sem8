@@ -1,13 +1,14 @@
 import io
 
-from core.ingest import load_file
+import pytest
+
+from core.ingest import IngestError, load_file
 
 
-def test_rows_with_extra_fields_are_skipped_not_fatal():
+def test_rows_with_extra_fields_raise_clear_error():
     csv_text = "id,name,city\n1,Ann,Pune\n2,Bob,Delhi,India,Extra\n3,Cy,Goa\n"
-    df = load_file(io.BytesIO(csv_text.encode()), "x.csv")
-    assert list(df["id"]) == [1, 3]
-    assert df.attrs["skipped_lines"] == [3]
+    with pytest.raises(IngestError, match="Could not safely parse the file"):
+        load_file(io.BytesIO(csv_text.encode()), "x.csv")
 
 
 def test_clean_file_has_no_skipped_lines():
