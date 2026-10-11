@@ -102,13 +102,17 @@ def render():
 def _auto_clean_notice() -> str | None:
     r = state.auto_clean()
     if not r["steps"]:
-        return "The data already looked clean, so no changes were needed."
+        return ("The data already looked clean, so no changes were needed."
+                if not r["failed"]
+                else "Automatic cleaning could not apply some suggested fixes. Open the Clean page to review.")
     msg = (f"Cleaned automatically: {r['steps']} step{'s' if r['steps'] != 1 else ''} applied, "
            f"quality score {r['before']:g} to {r['after']:g}. Every step is listed on the Clean page and can be undone.")
     if r["left_alone"]:
         msg += " Left unfilled because filling them would invent data: " + ", ".join(r["left_alone"]) + "."
     if r["outlier_cols"]:
         msg += " Unusual values were not changed; review them on the Clean page (Outliers tab)."
+    if r["failed"]:
+        msg += f" {len(r['failed'])} suggestion{'s' if len(r['failed']) != 1 else ''} failed validation and were skipped."
     return msg
 
 

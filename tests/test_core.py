@@ -76,6 +76,18 @@ def test_standardize_categories():
     assert set(out["Region"].dropna()) == {"West", "North"}
 
 
+def test_standardize_categories_preserves_nulls_and_non_text_values():
+    df = pd.DataFrame({"x": [" West ", "west", None, np.nan, 101, "NORTH", "north"]})
+    out = apply_step(df, {"op": "standardize_categories", "col": "x"})
+    assert out["x"].iloc[0] == "West"
+    assert out["x"].iloc[1] == "West"
+    assert str(out["x"].iloc[5]).lower() == "north"
+    assert str(out["x"].iloc[6]).lower() == "north"
+    assert out["x"].iloc[2] is None
+    assert pd.isna(out["x"].iloc[3])
+    assert out["x"].iloc[4] == 101
+
+
 def test_impute_methods():
     df = messy()
     assert apply_step(df, {"op": "impute", "col": "Age", "method": "median"})["Age"].isna().sum() == 0

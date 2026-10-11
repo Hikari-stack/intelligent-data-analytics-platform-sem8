@@ -170,9 +170,10 @@ def apply_step(df: pd.DataFrame, step: dict) -> pd.DataFrame:
     elif op == "standardize_categories":
         s = out[col]
         tidy = s.map(tidy_text)
+        is_text = tidy.map(lambda v: isinstance(v, str))
         key = tidy.map(lambda v: v.lower() if isinstance(v, str) else v)
-        canon = tidy.groupby(key).agg(_pick_spelling)
-        out[col] = key.map(canon)
+        canon = tidy[is_text].groupby(key[is_text]).agg(_pick_spelling)
+        out[col] = s.where(~is_text, key.map(canon))
 
     elif op == "impute":
         method = step.get("method", "median")
